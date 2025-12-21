@@ -3,14 +3,14 @@
 //  muse
 //
 //  Ring connection, reconnection, and audio management
-//  Uses MuseSDK which wraps BCLRingSDK 1.1.27
+//  Uses MuseSDK
 //
-//  Connection Strategy (v3 - SDK Timing Compliant):
-//  - Uses BCLRingSDK for all connection/command operations
+//  Connection Strategy (v3.2 - Always Configure HID):
 //  - CRITICAL: 3-second delay after BLE connection before sending commands
 //  - CRITICAL: 300ms spacing between consecutive commands
 //  - First connection: appEventBindRing() - clears ring data
-//  - Reconnection: appEventConnectRing() - preserves data, syncs history
+//  - Reconnection: appEventBindRing() - fire and forget, always configure HID
+//  - BCL603 rings have mics - always assume mic=true
 //
 //  Reconnection Strategy:
 //  - Save MAC address and UUID on successful connection
@@ -28,6 +28,29 @@ import Foundation
 import MuseSDK
 import Combine
 import CoreBluetooth
+
+// MARK: - Atomic Helper (Swift 6 safe)
+
+/// Thread-safe boolean for continuation protection
+private final class Atomic: @unchecked Sendable {
+    private var _value: Bool
+    private let lock = NSLock()
+
+    init(_ value: Bool) {
+        _value = value
+    }
+
+    /// Atomically sets to true if currently false. Returns true if successful.
+    func setTrueIfFalse() -> Bool {
+        lock.lock()
+        defer { lock.unlock() }
+        if !_value {
+            _value = true
+            return true
+        }
+        return false
+    }
+}
 
 // MARK: - Connection Mode
 
@@ -728,9 +751,9 @@ final class RingManager {
 
     // MARK: - Bind/Connect (Compound Commands)
 
-    /// Perform bind or connect command based on whether ring has been bound before
+    /// Perform bind command
     /// - First connection: appEventBindRing (clears ring data)
-    /// - Reconnection: appEventConnectRing (preserves data, syncs history)
+    /// - Reconnection: appEventBindRing (simpler, no history sync - avoids data sync errors)
     private func performBind() {
         let isFirstBind = !hasCompletedInitialBind
 
@@ -777,47 +800,46 @@ final class RingManager {
         }
     }
 
-    /// Reconnection - uses appEventConnectRing (preserves data, syncs history)
+    /// Reconnection - uses appEventBindRing (simpler, no history sync)
+    /// Stage 1 fix: Avoid data sync errors that can destabilize the ring
+    /// Always configures HID mode after, regardless of SDK response quality
     private func performReconnectBind() async {
-        // Create callbacks for history data sync (we don't need it for muse, but SDK requires it)
-        let callbacks = BCLDataSyncCallbacks(
-            onProgress: { totalNumber, currentIndex, progress, model in
-                print("[RingManager] History sync: \(currentIndex)/\(totalNumber) (\(progress)%)")
-            },
-            onStatusChanged: { status in
-                print("[RingManager] History sync status: \(status)")
-            },
-            onCompleted: { models in
-                print("[RingManager] History sync complete: \(models.count) records")
-            },
-            onError: { error in
-                print("[RingManager] History sync error: \(error)")
-            }
-        )
-
-        await withCheckedContinuation { (continuation: CheckedContinuation<Void, Never>) in
-            BCLRingManager.shared.appEventConnectRing(
-                date: Date(),
-                timeZone: BCLRingTimeZone.getCurrentSystemTimeZone(),
-                filterTime: nil,  // Don't filter - sync all
-                callbacks: callbacks
-            ) { [weak self] result in
-                Task { @MainActor in
-                    switch result {
-                    case .success(let response):
-                        self?.handleConnectSuccess(response)
-
-                    case .failure(let error):
-                        print("[RingManager] Reconnect command failed: \(error)")
-                        // On failure, try first bind as fallback (maybe ring was reset)
-                        print("[RingManager] Falling back to first bind...")
-                        self?.hasCompletedInitialBind = false
-                        await self?.performFirstBind()
+        // Fire off the bind command (don't wait for perfect response)
+        BCLRingManager.shared.appEventBindRing(
+            date: Date(),
+            timeZone: BCLRingTimeZone.getCurrentSystemTimeZone()
+        ) { [weak self] result in
+            Task { @MainActor in
+                switch result {
+                case .success(let response):
+                    // Try to extract info, but we'll configure HID regardless
+                    if !response.firmwareVersion.isEmpty {
+                        self?.firmwareVersion = response.firmwareVersion
                     }
-                    continuation.resume()
+                    let rawBattery = Int(response.batteryLevel)
+                    if rawBattery > 0 {
+                        self?.updateBatteryState(rawBattery: rawBattery)
+                    }
+                    print("[RingManager] Reconnect bind response received")
+
+                case .failure(let error):
+                    print("[RingManager] Reconnect bind error (continuing anyway): \(error)")
                 }
             }
         }
+
+        // Don't wait for SDK response - just mark connected and configure HID
+        // We know BCL603 rings have microphones
+        state = .connected
+        isMicrophoneSupported = true
+        isGestureMusicControlSupported = true
+        reconnectAttempts = 0
+
+        print("[RingManager] Reconnect: configuring HID mode...")
+
+        // Wait for bind command to process, then configure HID
+        try? await Task.sleep(nanoseconds: SDKTiming.interCommandDelay * 2)
+        await configureHIDMode()
     }
 
     /// Handle successful connect response (similar to bind but different response type)
@@ -846,15 +868,21 @@ final class RingManager {
 
     private func handleBindSuccess(_ response: BCLBindRingResponse) {
         // Extract device capabilities
-        isMicrophoneSupported = response.isMicrophoneSupported
-        firmwareVersion = response.firmwareVersion
-        isGestureMusicControlSupported = response.isGestureMusicControlSupported
+        // BCL603 rings have microphones - always assume true for this hardware
+        isMicrophoneSupported = true
+        isGestureMusicControlSupported = true
+
+        // Extract firmware version if available
+        if !response.firmwareVersion.isEmpty {
+            firmwareVersion = response.firmwareVersion
+        }
 
         // Handle charging state (battery 101 = charging, 102 = charged)
         let rawBattery = Int(response.batteryLevel)
         updateBatteryState(rawBattery: rawBattery)
 
-        print("[RingManager] Connected (FW: \(response.firmwareVersion), battery: \(batteryLevel)%\(isCharging ? " charging" : ""))")
+        let fwDisplay = firmwareVersion ?? "unknown"
+        print("[RingManager] Connected (FW: \(fwDisplay), battery: \(batteryLevel)%\(isCharging ? " charging" : ""))")
 
         state = .connected
         reconnectAttempts = 0
@@ -965,30 +993,18 @@ final class RingManager {
     private func setAudioFormat() async -> AudioSetupResult {
         return await withTaskCancellationHandler {
             await withCheckedContinuation { continuation in
-                var hasResumed = false
-                let resumeLock = NSLock()
+                let hasResumed = Atomic(false)
 
                 let timeoutTask = Task {
                     try? await Task.sleep(nanoseconds: UInt64(SDKTiming.commandTimeout * 1_000_000_000))
-                    resumeLock.lock()
-                    if !hasResumed {
-                        hasResumed = true
-                        resumeLock.unlock()
+                    if hasResumed.setTrueIfFalse() {
                         continuation.resume(returning: .timeout)
-                    } else {
-                        resumeLock.unlock()
                     }
                 }
 
                 BCLRingManager.shared.setActivePushAudioInfo(audioType: .adpcm) { result in
                     timeoutTask.cancel()
-                    resumeLock.lock()
-                    guard !hasResumed else {
-                        resumeLock.unlock()
-                        return
-                    }
-                    hasResumed = true
-                    resumeLock.unlock()
+                    guard hasResumed.setTrueIfFalse() else { return }
 
                     switch result {
                     case .success(let response):
@@ -1015,18 +1031,12 @@ final class RingManager {
     private func setHIDModeForAudio() async -> AudioSetupResult {
         return await withTaskCancellationHandler {
             await withCheckedContinuation { continuation in
-                var hasResumed = false
-                let resumeLock = NSLock()
+                let hasResumed = Atomic(false)
 
                 let timeoutTask = Task {
                     try? await Task.sleep(nanoseconds: UInt64(SDKTiming.commandTimeout * 1_000_000_000))
-                    resumeLock.lock()
-                    if !hasResumed {
-                        hasResumed = true
-                        resumeLock.unlock()
+                    if hasResumed.setTrueIfFalse() {
                         continuation.resume(returning: .timeout)
-                    } else {
-                        resumeLock.unlock()
                     }
                 }
 
@@ -1039,13 +1049,7 @@ final class RingManager {
                     screenWidthPixel: BCLRingManager.shared.getMobileDeviceScreenWidthPixel()
                 ) { result in
                     timeoutTask.cancel()
-                    resumeLock.lock()
-                    guard !hasResumed else {
-                        resumeLock.unlock()
-                        return
-                    }
-                    hasResumed = true
-                    resumeLock.unlock()
+                    guard hasResumed.setTrueIfFalse() else { return }
 
                     switch result {
                     case .success:
@@ -1254,19 +1258,13 @@ final class RingManager {
         print("[RingManager] Setting music control mode (touch=2, gesture=2)...")
 
         return await withCheckedContinuation { continuation in
-            var hasResumed = false
-            let resumeLock = NSLock()
+            let hasResumed = Atomic(false)
 
             let timeoutTask = Task {
                 try? await Task.sleep(nanoseconds: UInt64(SDKTiming.commandTimeout * 1_000_000_000))
-                resumeLock.lock()
-                if !hasResumed {
-                    hasResumed = true
-                    resumeLock.unlock()
+                if hasResumed.setTrueIfFalse() {
                     print("[RingManager] setHIDMode timeout")
                     continuation.resume(returning: false)
-                } else {
-                    resumeLock.unlock()
                 }
             }
 
@@ -1282,13 +1280,7 @@ final class RingManager {
                 screenWidthPixel: BCLRingManager.shared.getMobileDeviceScreenWidthPixel()
             ) { result in
                 timeoutTask.cancel()
-                resumeLock.lock()
-                guard !hasResumed else {
-                    resumeLock.unlock()
-                    return
-                }
-                hasResumed = true
-                resumeLock.unlock()
+                guard hasResumed.setTrueIfFalse() else { return }
 
                 switch result {
                 case .success(let response):

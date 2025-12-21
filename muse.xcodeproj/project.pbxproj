@@ -432,8 +432,10 @@
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = muse/Info.plist;
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.lifestyle";
-				INFOPLIST_KEY_NSBluetoothAlwaysUsageDescription = "needs bluetooth.";
+				INFOPLIST_KEY_NSBluetoothAlwaysUsageDescription = "muse needs bluetooth.";
 				INFOPLIST_KEY_NSBluetoothPeripheralUsageDescription = "Muse needs Bluetooth to connect to your smart ring for voice recording.";
+				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "muse can add your location to shareable cards. This is optional.";
+				INFOPLIST_KEY_NSPhotoLibraryAddUsageDescription = "muse needs access to save shareable cards to your photo library.";
 				INFOPLIST_KEY_NSSpeechRecognitionUsageDescription = "backup if whisperkit doesn't work.";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
@@ -471,8 +473,10 @@
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = muse/Info.plist;
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.lifestyle";
-				INFOPLIST_KEY_NSBluetoothAlwaysUsageDescription = "needs bluetooth.";
+				INFOPLIST_KEY_NSBluetoothAlwaysUsageDescription = "muse needs bluetooth.";
 				INFOPLIST_KEY_NSBluetoothPeripheralUsageDescription = "Muse needs Bluetooth to connect to your smart ring for voice recording.";
+				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "muse can add your location to shareable cards. This is optional.";
+				INFOPLIST_KEY_NSPhotoLibraryAddUsageDescription = "muse needs access to save shareable cards to your photo library.";
 				INFOPLIST_KEY_NSSpeechRecognitionUsageDescription = "backup if whisperkit doesn't work.";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
