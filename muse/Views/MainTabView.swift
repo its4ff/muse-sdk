@@ -10,12 +10,14 @@ import SwiftUI
 import SwiftData
 import Combine
 import WhisperKit
+import CoreLocation
 
 struct MainTabView: View {
     @Environment(\.modelContext) private var modelContext
     @State private var selectedTab: Tab = .home
     @State private var ringManager = RingManager.shared
     @State private var whisperService = WhisperService.shared
+    @State private var locationService = LocationService.shared
 
     // App-level audio subscription (persists across tab changes)
     @State private var audioSessionSubscription: AnyCancellable?
@@ -45,7 +47,19 @@ struct MainTabView: View {
         .tint(.museAccent)
         .onAppear {
             setupAppLevelAudioListener()
+            setupLocationService()
         }
+    }
+
+    // MARK: - Location Setup
+
+    private func setupLocationService() {
+        // Request permission if not determined
+        if locationService.authorizationStatus == .notDetermined {
+            locationService.requestPermission()
+        }
+        // Start updating if already authorized
+        locationService.startUpdating()
     }
 
     // MARK: - App-Level Audio Handling
@@ -146,14 +160,19 @@ struct MainTabView: View {
 
     /// Create and save a Muse entry
     private func createMuse(transcription: String, duration: TimeInterval) {
+        // Capture location if available
+        let location = locationService.getCurrentLocationString()
+
         let muse = Muse(
             transcription: transcription,
-            duration: duration
+            duration: duration,
+            locationString: location
         )
 
         modelContext.insert(muse)
 
-        print("[MainTabView] Created muse: \"\(transcription.prefix(50))...\" (\(String(format: "%.1f", duration))s)")
+        let locationInfo = location.map { " @ \($0)" } ?? ""
+        print("[MainTabView] Created muse: \"\(transcription.prefix(50))...\" (\(String(format: "%.1f", duration))s)\(locationInfo)")
     }
 }
 

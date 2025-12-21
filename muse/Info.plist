@@ -9,5 +9,7 @@
 	</array>
 	<key>NSPhotoLibraryAddUsageDescription</key>
 	<string>muse needs access to save shareable cards to your photo library.</string>
+	<key>NSLocationWhenInUseUsageDescription</key>
+	<string>muse can add your location to shareable cards. This is optional.</string>
 </dict>
 </plist>

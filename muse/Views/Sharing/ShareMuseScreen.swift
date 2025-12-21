@@ -25,6 +25,7 @@ struct ShareMuseScreen: View {
     @State private var animateIn = false
     @State private var showShareSheet = false
     @State private var imageToShare: UIImage?
+    @State private var showLocation: Bool = true  // Toggle for showing location on render
 
     var body: some View {
         ZStack {
@@ -97,19 +98,48 @@ struct ShareMuseScreen: View {
 
             Spacer()
 
-            // Placeholder for symmetry
-            Color.clear
-                .frame(width: 36, height: 36)
+            // Location toggle (only show if muse has location)
+            if muse.locationString != nil {
+                Button {
+                    withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
+                        showLocation.toggle()
+                    }
+                } label: {
+                    Image(systemName: showLocation ? "mappin.circle.fill" : "mappin.slash")
+                        .font(.system(size: 18, weight: .medium))
+                        .foregroundColor(showLocation ? .museAccent : .museTextTertiary)
+                        .frame(width: 36, height: 36)
+                        .background(Color.museBackgroundSecondary)
+                        .clipShape(Circle())
+                }
+                .buttonStyle(.plain)
+            } else {
+                // Placeholder for symmetry when no location
+                Color.clear
+                    .frame(width: 36, height: 36)
+            }
         }
     }
 
     // MARK: - Card Preview
 
+    // Computed location to pass to ShareableMuseView
+    private var locationForRender: String? {
+        showLocation ? muse.locationString : nil
+    }
+
     private var cardPreview: some View {
         GeometryReader { geometry in
             let scale = calculatePreviewScale(in: geometry.size)
 
-            ShareableMuseView(muse: muse, format: selectedFormat, style: selectedStyle)
+            ShareableMuseView(
+                transcription: muse.transcription,
+                timestamp: muse.createdAt,
+                duration: muse.duration,
+                format: selectedFormat,
+                style: selectedStyle,
+                locationString: locationForRender
+            )
                 .scaleEffect(scale)
                 .frame(
                     width: selectedFormat.size.width * scale,
@@ -301,7 +331,14 @@ struct ShareMuseScreen: View {
     // MARK: - Actions
 
     private func shareCard() {
-        let cardView = ShareableMuseView(muse: muse, format: selectedFormat, style: selectedStyle)
+        let cardView = ShareableMuseView(
+            transcription: muse.transcription,
+            timestamp: muse.createdAt,
+            duration: muse.duration,
+            format: selectedFormat,
+            style: selectedStyle,
+            locationString: locationForRender
+        )
 
         if let image = ShareMuseRenderer.render(cardView) {
             imageToShare = image
@@ -313,7 +350,14 @@ struct ShareMuseScreen: View {
         isSaving = true
         errorMessage = nil
 
-        let cardView = ShareableMuseView(muse: muse, format: selectedFormat, style: selectedStyle)
+        let cardView = ShareableMuseView(
+            transcription: muse.transcription,
+            timestamp: muse.createdAt,
+            duration: muse.duration,
+            format: selectedFormat,
+            style: selectedStyle,
+            locationString: locationForRender
+        )
 
         Task {
             do {
@@ -415,11 +459,21 @@ struct ShareSheet: UIViewControllerRepresentable {
 
 // MARK: - Preview
 
-#Preview {
+#Preview("With Location") {
     ShareMuseScreen(
         muse: Muse(
             transcription: "Sometimes the quiet moments speak the loudest. I've been thinking about how we measure success. It's not about the destination.",
-            duration: 12.5
+            duration: 12.5,
+            locationString: "san francisco, usa"
+        )
+    )
+}
+
+#Preview("No Location") {
+    ShareMuseScreen(
+        muse: Muse(
+            transcription: "Hello world.",
+            duration: 2.0
         )
     )
 }

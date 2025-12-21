@@ -48,6 +48,7 @@ struct ShareableMuseView: View {
     let duration: TimeInterval
     let format: ShareMuseFormat
     let style: ShareMuseStyle
+    let locationString: String?
 
     var body: some View {
         switch style {
@@ -66,6 +67,16 @@ struct ShareableMuseView: View {
             Color(hex: "0F0E0D")
 
             VStack(spacing: 0) {
+                // Location header (top right)
+                if let location = locationString {
+                    HStack {
+                        Spacer()
+                        locationView(location: location, isDark: true)
+                    }
+                    .padding(.horizontal, format == .story ? 56 : 72)
+                    .padding(.top, format == .story ? 100 : 80)
+                }
+
                 Spacer()
 
                 // Large text - no card, just text (mirrors minimal)
@@ -130,6 +141,16 @@ struct ShareableMuseView: View {
             Color(hex: "FAF8F5")
 
             VStack(spacing: 0) {
+                // Location header (top right)
+                if let location = locationString {
+                    HStack {
+                        Spacer()
+                        locationView(location: location, isDark: false)
+                    }
+                    .padding(.horizontal, format == .story ? 56 : 72)
+                    .padding(.top, format == .story ? 100 : 80)
+                }
+
                 Spacer()
 
                 // Large bold text - no card, just text
@@ -265,6 +286,18 @@ struct ShareableMuseView: View {
         let seconds = Int(duration) % 60
         return String(format: "%d:%02d", minutes, seconds)
     }
+
+    // MARK: - Location View
+
+    private func locationView(location: String, isDark: Bool) -> some View {
+        HStack(spacing: format == .story ? 10 : 12) {
+            Image(systemName: "mappin")
+                .font(.system(size: format == .story ? 24 : 28, weight: .regular))
+            Text(location)
+                .font(.system(size: format == .story ? 28 : 32, weight: .regular, design: .serif))
+        }
+        .foregroundColor(Color(hex: isDark ? "5A5550" : "9A9590"))
+    }
 }
 
 // MARK: - Convenience Initializer
@@ -276,73 +309,56 @@ extension ShareableMuseView {
         self.duration = muse.duration
         self.format = format
         self.style = style
+        self.locationString = muse.locationString
     }
 }
 
 // MARK: - Previews
 
-#Preview("Dark - Short") {
+#Preview("Dark - With Location") {
+    ShareableMuseView(
+        transcription: "Sometimes the quiet moments speak the loudest.",
+        timestamp: Date(),
+        duration: 5.2,
+        format: .story,
+        style: .dark,
+        locationString: "shenzhen, china"
+    )
+    .frame(width: 360, height: 640)
+}
+
+#Preview("Dark - No Location") {
     ShareableMuseView(
         transcription: "Hello.",
         timestamp: Date(),
         duration: 1.2,
         format: .story,
-        style: .dark
+        style: .dark,
+        locationString: nil
     )
     .frame(width: 360, height: 640)
 }
 
-#Preview("Dark - Medium") {
+#Preview("Light - With Location") {
     ShareableMuseView(
         transcription: "Sometimes the quiet moments speak the loudest.",
         timestamp: Date(),
         duration: 5.2,
         format: .story,
-        style: .dark
+        style: .minimal,
+        locationString: "san francisco, usa"
     )
     .frame(width: 360, height: 640)
 }
 
-#Preview("Dark - Long") {
-    ShareableMuseView(
-        transcription: "I've been thinking about how we measure success. It's not about the destination, it's about who you become along the way. The journey shapes us.",
-        timestamp: Date(),
-        duration: 18.7,
-        format: .story,
-        style: .dark
-    )
-    .frame(width: 360, height: 640)
-}
-
-#Preview("Minimal - Short") {
+#Preview("Light - No Location") {
     ShareableMuseView(
         transcription: "Yes.",
         timestamp: Date(),
         duration: 0.8,
         format: .story,
-        style: .minimal
-    )
-    .frame(width: 360, height: 640)
-}
-
-#Preview("Minimal - Medium") {
-    ShareableMuseView(
-        transcription: "Sometimes the quiet moments speak the loudest.",
-        timestamp: Date(),
-        duration: 5.2,
-        format: .story,
-        style: .minimal
-    )
-    .frame(width: 360, height: 640)
-}
-
-#Preview("Minimal - Long") {
-    ShareableMuseView(
-        transcription: "I've been thinking about how we measure success. It's not about the destination, it's about who you become along the way. The journey shapes us.",
-        timestamp: Date(),
-        duration: 18.7,
-        format: .story,
-        style: .minimal
+        style: .minimal,
+        locationString: nil
     )
     .frame(width: 360, height: 640)
 }

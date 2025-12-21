@@ -15,17 +15,20 @@ final class Muse {
     var transcription: String
     var duration: TimeInterval  // Recording duration in seconds
     var audioData: Data?        // Optional raw PCM audio (for playback if needed)
+    var locationString: String? // Optional location (e.g. "shenzhen, china")
 
     init(
         transcription: String,
         duration: TimeInterval,
-        audioData: Data? = nil
+        audioData: Data? = nil,
+        locationString: String? = nil
     ) {
         self.id = UUID()
         self.createdAt = Date()
         self.transcription = transcription
         self.duration = duration
         self.audioData = audioData
+        self.locationString = locationString
     }
 
     // MARK: - Computed Properties

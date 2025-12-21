@@ -44,6 +44,41 @@ All transcription happens **on-device** using Whisperkit's small model.
 
 ---
 
+## Development Setup
+
+**Requirements:**
+- Xcode 15.0+
+- iOS 17.0+ device (simulator won't work for BLE)
+- Apple Developer account (for device deployment)
+
+**Steps:**
+
+1. Clone the repo
+   ```bash
+   git clone <repo-url>
+   cd muse
+   ```
+
+2. Open in Xcode
+   ```bash
+   open muse.xcodeproj
+   ```
+
+3. Wait for Swift packages to resolve
+   - **WhisperKit** (remote) — downloads automatically from GitHub
+   - **MuseSDK** (local) — included in repo, links automatically
+
+4. Select your device as the build target (not simulator)
+
+5. Build and run (`Cmd + R`)
+
+**First launch:**
+- WhisperKit downloads the transcription model (~40MB) on first use
+- Grant Bluetooth permission when prompted
+- Location permission is optional (for shareable cards)
+
+---
+
 ## Build Your Own
 
 The core of muse is simple: **ring audio capture + on-device transcription**.
