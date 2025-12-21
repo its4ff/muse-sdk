@@ -1,0 +1,426 @@
+//
+//  ShareMuseScreen.swift
+//  muse
+//
+//  Share screen for exporting muses as shareable images
+//  Two styles: Dark (espresso card) and Minimal (stark black text)
+//
+
+import SwiftUI
+
+struct ShareMuseScreen: View {
+    @Environment(\.dismiss) private var dismiss
+    @AppStorage("shareMuseStyle") private var selectedStyleRaw: String = ShareMuseStyle.dark.rawValue
+
+    let muse: Muse
+
+    private var selectedStyle: ShareMuseStyle {
+        ShareMuseStyle(rawValue: selectedStyleRaw) ?? .dark
+    }
+
+    @State private var selectedFormat: ShareMuseFormat = .story
+    @State private var isSaving = false
+    @State private var showSuccessMessage = false
+    @State private var errorMessage: String?
+    @State private var animateIn = false
+    @State private var showShareSheet = false
+    @State private var imageToShare: UIImage?
+
+    var body: some View {
+        ZStack {
+            // Background
+            Color.museBackground.ignoresSafeArea()
+
+            VStack(spacing: 0) {
+                // Header
+                header
+                    .padding(.horizontal, 20)
+                    .padding(.top, 16)
+                    .padding(.bottom, 12)
+
+                // Preview
+                cardPreview
+                    .opacity(animateIn ? 1 : 0)
+                    .scaleEffect(animateIn ? 1 : 0.94)
+
+                Spacer()
+
+                // Controls
+                controls
+                    .padding(.horizontal, 24)
+                    .padding(.bottom, 48)
+                    .padding(.top, 16)
+                    .opacity(animateIn ? 1 : 0)
+                    .offset(y: animateIn ? 0 : 15)
+            }
+
+            // Success toast
+            if showSuccessMessage {
+                successToast
+            }
+        }
+        .sheet(isPresented: $showShareSheet) {
+            if let image = imageToShare {
+                ShareSheet(items: [image])
+                    .presentationDetents([.medium, .large])
+                    .presentationDragIndicator(.visible)
+            }
+        }
+        .onAppear {
+            withAnimation(.spring(response: 0.6, dampingFraction: 0.85)) {
+                animateIn = true
+            }
+        }
+    }
+
+    // MARK: - Header
+
+    private var header: some View {
+        HStack {
+            Button {
+                dismiss()
+            } label: {
+                Image(systemName: "xmark")
+                    .font(.system(size: 14, weight: .medium))
+                    .foregroundColor(.museTextSecondary)
+                    .frame(width: 36, height: 36)
+                    .background(Color.museBackgroundSecondary)
+                    .clipShape(Circle())
+            }
+            .buttonStyle(.plain)
+
+            Spacer()
+
+            Text("share")
+                .font(.system(size: 18, weight: .regular, design: .serif))
+                .foregroundColor(.museText)
+
+            Spacer()
+
+            // Placeholder for symmetry
+            Color.clear
+                .frame(width: 36, height: 36)
+        }
+    }
+
+    // MARK: - Card Preview
+
+    private var cardPreview: some View {
+        GeometryReader { geometry in
+            let scale = calculatePreviewScale(in: geometry.size)
+
+            ShareableMuseView(muse: muse, format: selectedFormat, style: selectedStyle)
+                .scaleEffect(scale)
+                .frame(
+                    width: selectedFormat.size.width * scale,
+                    height: selectedFormat.size.height * scale
+                )
+                .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+                .shadow(color: Color.black.opacity(0.2), radius: 30, y: 15)
+                .overlay(
+                    RoundedRectangle(cornerRadius: 16, style: .continuous)
+                        .stroke(Color.museBorder.opacity(0.3), lineWidth: 1)
+                )
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+        }
+        .padding(.horizontal, 28)
+    }
+
+    // MARK: - Controls
+
+    private var controls: some View {
+        VStack(spacing: 14) {
+            // Style picker
+            stylePicker
+
+            // Format picker
+            formatPicker
+
+            // Action buttons row
+            HStack(spacing: 12) {
+                // Save to Photos button
+                Button {
+                    saveToPhotos()
+                } label: {
+                    HStack(spacing: 10) {
+                        if isSaving {
+                            ProgressView()
+                                .progressViewStyle(CircularProgressViewStyle(tint: .museText))
+                                .scaleEffect(0.9)
+                        } else {
+                            Image(systemName: "square.and.arrow.down")
+                                .font(.system(size: 14, weight: .medium))
+                        }
+                        Text(isSaving ? "saving..." : "save to photos")
+                            .font(.museBodyMedium)
+                    }
+                    .foregroundColor(.museText)
+                    .frame(maxWidth: .infinity)
+                    .frame(height: 52)
+                    .background(Color.museBackgroundSecondary)
+                    .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 14, style: .continuous)
+                            .stroke(Color.museBorder, lineWidth: 1)
+                    )
+                }
+                .disabled(isSaving)
+
+                // Share button
+                Button {
+                    shareCard()
+                } label: {
+                    Image(systemName: "square.and.arrow.up")
+                        .font(.system(size: 14, weight: .medium))
+                        .foregroundColor(.museText)
+                        .frame(width: 52, height: 52)
+                        .background(Color.museBackgroundSecondary)
+                        .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 14, style: .continuous)
+                                .stroke(Color.museBorder, lineWidth: 1)
+                        )
+                }
+            }
+
+            // Error message
+            if let error = errorMessage {
+                Text(error)
+                    .font(.museCaption)
+                    .foregroundColor(.museError)
+                    .multilineTextAlignment(.center)
+                    .padding(.top, 4)
+            }
+        }
+    }
+
+    private var stylePicker: some View {
+        HStack(spacing: 10) {
+            ForEach(ShareMuseStyle.allCases, id: \.rawValue) { style in
+                Button {
+                    withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
+                        selectedStyleRaw = style.rawValue
+                    }
+                } label: {
+                    VStack(spacing: 6) {
+                        // Style preview circle
+                        ZStack {
+                            if style == .dark {
+                                // Dark style preview
+                                Circle()
+                                    .fill(
+                                        LinearGradient(
+                                            colors: [Color(hex: "3D3833"), Color(hex: "1F1D1A")],
+                                            startPoint: .topLeading,
+                                            endPoint: .bottomTrailing
+                                        )
+                                    )
+                                    .frame(width: 40, height: 40)
+                            } else {
+                                // Minimal style preview
+                                Circle()
+                                    .fill(Color(hex: "FAF8F5"))
+                                    .frame(width: 40, height: 40)
+                                    .overlay(
+                                        Text("\u{201C}")
+                                            .font(.system(size: 18, weight: .light, design: .serif))
+                                            .foregroundColor(Color(hex: "1A1816"))
+                                    )
+                            }
+                        }
+                        .overlay(
+                            Circle()
+                                .stroke(
+                                    selectedStyle == style ? Color.museAccent : Color.museBorder,
+                                    lineWidth: selectedStyle == style ? 2 : 1
+                                )
+                        )
+
+                        Text(style.displayName)
+                            .font(.system(size: 12, weight: selectedStyle == style ? .medium : .regular))
+                            .foregroundColor(selectedStyle == style ? .museText : .museTextTertiary)
+                    }
+                }
+                .buttonStyle(.plain)
+            }
+        }
+    }
+
+    private var formatPicker: some View {
+        HStack(spacing: 10) {
+            FormatButton(
+                title: "story",
+                icon: "rectangle.portrait",
+                isSelected: selectedFormat == .story
+            ) {
+                withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
+                    selectedFormat = .story
+                }
+            }
+
+            FormatButton(
+                title: "feed",
+                icon: "rectangle.inset.filled",
+                isSelected: selectedFormat == .feed
+            ) {
+                withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
+                    selectedFormat = .feed
+                }
+            }
+        }
+    }
+
+    // MARK: - Success Toast
+
+    private var successToast: some View {
+        VStack {
+            Spacer()
+
+            HStack(spacing: 12) {
+                Image(systemName: "checkmark.circle.fill")
+                    .font(.system(size: 16, weight: .medium))
+                    .foregroundColor(.museSuccess)
+
+                Text("saved to photos")
+                    .font(.museBodyMedium)
+                    .foregroundColor(.museText)
+            }
+            .padding(.horizontal, 24)
+            .padding(.vertical, 14)
+            .background(Color.museCard)
+            .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+            .overlay(
+                RoundedRectangle(cornerRadius: 16, style: .continuous)
+                    .stroke(Color.museBorder, lineWidth: 1)
+            )
+            .shadow(color: Color(hex: "2D2A26").opacity(0.1), radius: 16, y: 8)
+            .padding(.bottom, 120)
+            .transition(.move(edge: .bottom).combined(with: .opacity))
+        }
+    }
+
+    // MARK: - Actions
+
+    private func shareCard() {
+        let cardView = ShareableMuseView(muse: muse, format: selectedFormat, style: selectedStyle)
+
+        if let image = ShareMuseRenderer.render(cardView) {
+            imageToShare = image
+            showShareSheet = true
+        }
+    }
+
+    private func saveToPhotos() {
+        isSaving = true
+        errorMessage = nil
+
+        let cardView = ShareableMuseView(muse: muse, format: selectedFormat, style: selectedStyle)
+
+        Task {
+            do {
+                try await ShareMuseRenderer.saveToPhotos(cardView)
+
+                await MainActor.run {
+                    isSaving = false
+
+                    // Haptic feedback
+                    let generator = UINotificationFeedbackGenerator()
+                    generator.notificationOccurred(.success)
+
+                    // Show success toast
+                    withAnimation(.spring(response: 0.5, dampingFraction: 0.8)) {
+                        showSuccessMessage = true
+                    }
+                }
+
+                // Hide success message after delay
+                try await Task.sleep(for: .seconds(2.0))
+
+                await MainActor.run {
+                    withAnimation(.spring(response: 0.4, dampingFraction: 0.85)) {
+                        showSuccessMessage = false
+                    }
+                }
+            } catch {
+                await MainActor.run {
+                    isSaving = false
+                    errorMessage = error.localizedDescription
+
+                    let generator = UINotificationFeedbackGenerator()
+                    generator.notificationOccurred(.error)
+                }
+            }
+        }
+    }
+
+    // MARK: - Helpers
+
+    private func calculatePreviewScale(in containerSize: CGSize) -> CGFloat {
+        let cardSize = selectedFormat.size
+        let maxWidth = containerSize.width
+        let maxHeight = containerSize.height
+
+        let widthScale = maxWidth / cardSize.width
+        let heightScale = maxHeight / cardSize.height
+
+        return min(widthScale, heightScale)
+    }
+}
+
+// MARK: - Format Button Component
+
+private struct FormatButton: View {
+    let title: String
+    let icon: String
+    let isSelected: Bool
+    let action: () -> Void
+
+    var body: some View {
+        Button(action: action) {
+            VStack(spacing: 8) {
+                Image(systemName: icon)
+                    .font(.system(size: 22, weight: .regular))
+                    .symbolRenderingMode(.hierarchical)
+
+                Text(title)
+                    .font(.museCaptionMedium)
+            }
+            .foregroundColor(isSelected ? .museText : .museTextTertiary)
+            .frame(maxWidth: .infinity)
+            .frame(height: 72)
+            .background(isSelected ? Color.museBackgroundSecondary : Color.clear)
+            .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+            .overlay(
+                RoundedRectangle(cornerRadius: 14, style: .continuous)
+                    .stroke(
+                        isSelected ? Color.museBorder : Color.museBorder.opacity(0.5),
+                        lineWidth: 1
+                    )
+            )
+        }
+        .buttonStyle(.plain)
+    }
+}
+
+// MARK: - Share Sheet
+
+struct ShareSheet: UIViewControllerRepresentable {
+    let items: [Any]
+
+    func makeUIViewController(context: Context) -> UIActivityViewController {
+        UIActivityViewController(activityItems: items, applicationActivities: nil)
+    }
+
+    func updateUIViewController(_ uiViewController: UIActivityViewController, context: Context) {}
+}
+
+// MARK: - Preview
+
+#Preview {
+    ShareMuseScreen(
+        muse: Muse(
+            transcription: "Sometimes the quiet moments speak the loudest. I've been thinking about how we measure success. It's not about the destination.",
+            duration: 12.5
+        )
+    )
+}

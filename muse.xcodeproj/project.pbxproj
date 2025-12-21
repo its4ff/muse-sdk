@@ -1,0 +1,661 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 77;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		1D9497F12EF7EA7600C21762 /* MuseSDK in Frameworks */ = {isa = PBXBuildFile; productRef = 1D9497F02EF7EA7600C21762 /* MuseSDK */; };
+		1D9497F42EF7EAD200C21762 /* WhisperKit in Frameworks */ = {isa = PBXBuildFile; productRef = 1D9497F32EF7EAD200C21762 /* WhisperKit */; };
+		1D9497F62EF7EAD200C21762 /* whisperkit-cli in Frameworks */ = {isa = PBXBuildFile; productRef = 1D9497F52EF7EAD200C21762 /* whisperkit-cli */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXContainerItemProxy section */
+		1D94978C2EF7E5B900C21762 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 1D9497742EF7E5B800C21762 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 1D94977B2EF7E5B800C21762;
+			remoteInfo = muse;
+		};
+		1D9497962EF7E5BA00C21762 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 1D9497742EF7E5B800C21762 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 1D94977B2EF7E5B800C21762;
+			remoteInfo = muse;
+		};
+/* End PBXContainerItemProxy section */
+
+/* Begin PBXFileReference section */
+		1D94977C2EF7E5B800C21762 /* muse.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = muse.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		1D94978B2EF7E5B900C21762 /* museTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = museTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		1D9497952EF7E5BA00C21762 /* museUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = museUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+/* End PBXFileReference section */
+
+/* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
+		1D9497A92EF7E88C00C21762 /* Exceptions for "muse" folder in "muse" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				Info.plist,
+			);
+			target = 1D94977B2EF7E5B800C21762 /* muse */;
+		};
+/* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
+
+/* Begin PBXFileSystemSynchronizedRootGroup section */
+		1D94977E2EF7E5B800C21762 /* muse */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				1D9497A92EF7E88C00C21762 /* Exceptions for "muse" folder in "muse" target */,
+			);
+			path = muse;
+			sourceTree = "<group>";
+		};
+		1D94978E2EF7E5BA00C21762 /* museTests */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = museTests;
+			sourceTree = "<group>";
+		};
+		1D9497982EF7E5BA00C21762 /* museUITests */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = museUITests;
+			sourceTree = "<group>";
+		};
+/* End PBXFileSystemSynchronizedRootGroup section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		1D9497792EF7E5B800C21762 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				1D9497F42EF7EAD200C21762 /* WhisperKit in Frameworks */,
+				1D9497F12EF7EA7600C21762 /* MuseSDK in Frameworks */,
+				1D9497F62EF7EAD200C21762 /* whisperkit-cli in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		1D9497882EF7E5B900C21762 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		1D9497922EF7E5BA00C21762 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXGroup section */
+		1D9497732EF7E5B800C21762 = {
+			isa = PBXGroup;
+			children = (
+				1D94977E2EF7E5B800C21762 /* muse */,
+				1D94978E2EF7E5BA00C21762 /* museTests */,
+				1D9497982EF7E5BA00C21762 /* museUITests */,
+				1D94977D2EF7E5B800C21762 /* Products */,
+			);
+			sourceTree = "<group>";
+		};
+		1D94977D2EF7E5B800C21762 /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				1D94977C2EF7E5B800C21762 /* muse.app */,
+				1D94978B2EF7E5B900C21762 /* museTests.xctest */,
+				1D9497952EF7E5BA00C21762 /* museUITests.xctest */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		1D94977B2EF7E5B800C21762 /* muse */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 1D94979F2EF7E5BA00C21762 /* Build configuration list for PBXNativeTarget "muse" */;
+			buildPhases = (
+				1D9497782EF7E5B800C21762 /* Sources */,
+				1D9497792EF7E5B800C21762 /* Frameworks */,
+				1D94977A2EF7E5B800C21762 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			fileSystemSynchronizedGroups = (
+				1D94977E2EF7E5B800C21762 /* muse */,
+			);
+			name = muse;
+			packageProductDependencies = (
+				1D9497F02EF7EA7600C21762 /* MuseSDK */,
+				1D9497F32EF7EAD200C21762 /* WhisperKit */,
+				1D9497F52EF7EAD200C21762 /* whisperkit-cli */,
+			);
+			productName = muse;
+			productReference = 1D94977C2EF7E5B800C21762 /* muse.app */;
+			productType = "com.apple.product-type.application";
+		};
+		1D94978A2EF7E5B900C21762 /* museTests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 1D9497A22EF7E5BA00C21762 /* Build configuration list for PBXNativeTarget "museTests" */;
+			buildPhases = (
+				1D9497872EF7E5B900C21762 /* Sources */,
+				1D9497882EF7E5B900C21762 /* Frameworks */,
+				1D9497892EF7E5B900C21762 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				1D94978D2EF7E5B900C21762 /* PBXTargetDependency */,
+			);
+			fileSystemSynchronizedGroups = (
+				1D94978E2EF7E5BA00C21762 /* museTests */,
+			);
+			name = museTests;
+			packageProductDependencies = (
+			);
+			productName = museTests;
+			productReference = 1D94978B2EF7E5B900C21762 /* museTests.xctest */;
+			productType = "com.apple.product-type.bundle.unit-test";
+		};
+		1D9497942EF7E5BA00C21762 /* museUITests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 1D9497A52EF7E5BA00C21762 /* Build configuration list for PBXNativeTarget "museUITests" */;
+			buildPhases = (
+				1D9497912EF7E5BA00C21762 /* Sources */,
+				1D9497922EF7E5BA00C21762 /* Frameworks */,
+				1D9497932EF7E5BA00C21762 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				1D9497972EF7E5BA00C21762 /* PBXTargetDependency */,
+			);
+			fileSystemSynchronizedGroups = (
+				1D9497982EF7E5BA00C21762 /* museUITests */,
+			);
+			name = museUITests;
+			packageProductDependencies = (
+			);
+			productName = museUITests;
+			productReference = 1D9497952EF7E5BA00C21762 /* museUITests.xctest */;
+			productType = "com.apple.product-type.bundle.ui-testing";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		1D9497742EF7E5B800C21762 /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				BuildIndependentTargetsInParallel = 1;
+				LastSwiftUpdateCheck = 2620;
+				LastUpgradeCheck = 2620;
+				TargetAttributes = {
+					1D94977B2EF7E5B800C21762 = {
+						CreatedOnToolsVersion = 26.2;
+					};
+					1D94978A2EF7E5B900C21762 = {
+						CreatedOnToolsVersion = 26.2;
+						TestTargetID = 1D94977B2EF7E5B800C21762;
+					};
+					1D9497942EF7E5BA00C21762 = {
+						CreatedOnToolsVersion = 26.2;
+						TestTargetID = 1D94977B2EF7E5B800C21762;
+					};
+				};
+			};
+			buildConfigurationList = 1D9497772EF7E5B800C21762 /* Build configuration list for PBXProject "muse" */;
+			developmentRegion = en;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				en,
+				Base,
+			);
+			mainGroup = 1D9497732EF7E5B800C21762;
+			minimizedProjectReferenceProxies = 1;
+			packageReferences = (
+				1D9497EF2EF7EA7600C21762 /* XCLocalSwiftPackageReference "MuseSDK" */,
+				1D9497F22EF7EAD200C21762 /* XCRemoteSwiftPackageReference "WhisperKit" */,
+			);
+			preferredProjectObjectVersion = 77;
+			productRefGroup = 1D94977D2EF7E5B800C21762 /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				1D94977B2EF7E5B800C21762 /* muse */,
+				1D94978A2EF7E5B900C21762 /* museTests */,
+				1D9497942EF7E5BA00C21762 /* museUITests */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+		1D94977A2EF7E5B800C21762 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		1D9497892EF7E5B900C21762 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		1D9497932EF7E5BA00C21762 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
+
+/* Begin PBXSourcesBuildPhase section */
+		1D9497782EF7E5B800C21762 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		1D9497872EF7E5B900C21762 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		1D9497912EF7E5BA00C21762 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin PBXTargetDependency section */
+		1D94978D2EF7E5B900C21762 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 1D94977B2EF7E5B800C21762 /* muse */;
+			targetProxy = 1D94978C2EF7E5B900C21762 /* PBXContainerItemProxy */;
+		};
+		1D9497972EF7E5BA00C21762 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 1D94977B2EF7E5B800C21762 /* muse */;
+			targetProxy = 1D9497962EF7E5BA00C21762 /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
+
+/* Begin XCBuildConfiguration section */
+		1D94979D2EF7E5BA00C21762 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++20";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				DEVELOPMENT_TEAM = BY98A58282;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_TESTABILITY = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu17;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"DEBUG=1",
+					"$(inherited)",
+				);
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 26.2;
+				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
+				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
+				MTL_FAST_MATH = YES;
+				ONLY_ACTIVE_ARCH = YES;
+				SDKROOT = iphoneos;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "DEBUG $(inherited)";
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+			};
+			name = Debug;
+		};
+		1D94979E2EF7E5BA00C21762 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++20";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				DEVELOPMENT_TEAM = BY98A58282;
+				ENABLE_NS_ASSERTIONS = NO;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu17;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 26.2;
+				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
+				MTL_ENABLE_DEBUG_INFO = NO;
+				MTL_FAST_MATH = YES;
+				SDKROOT = iphoneos;
+				SWIFT_COMPILATION_MODE = wholemodule;
+				VALIDATE_PRODUCT = YES;
+			};
+			name = Release;
+		};
+		1D9497A02EF7E5BA00C21762 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_ENTITLEMENTS = muse/muse.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = BY98A58282;
+				ENABLE_PREVIEWS = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = muse/Info.plist;
+				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.lifestyle";
+				INFOPLIST_KEY_NSBluetoothAlwaysUsageDescription = "needs bluetooth.";
+				INFOPLIST_KEY_NSBluetoothPeripheralUsageDescription = "Muse needs Bluetooth to connect to your smart ring for voice recording.";
+				INFOPLIST_KEY_NSSpeechRecognitionUsageDescription = "backup if whisperkit doesn't work.";
+				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
+				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
+				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
+				INFOPLIST_KEY_UISupportedInterfaceOrientations = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				IPHONEOS_DEPLOYMENT_TARGET = 17.6;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = "-ff.com.muse";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
+		1D9497A12EF7E5BA00C21762 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_ENTITLEMENTS = muse/muse.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = BY98A58282;
+				ENABLE_PREVIEWS = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = muse/Info.plist;
+				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.lifestyle";
+				INFOPLIST_KEY_NSBluetoothAlwaysUsageDescription = "needs bluetooth.";
+				INFOPLIST_KEY_NSBluetoothPeripheralUsageDescription = "Muse needs Bluetooth to connect to your smart ring for voice recording.";
+				INFOPLIST_KEY_NSSpeechRecognitionUsageDescription = "backup if whisperkit doesn't work.";
+				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
+				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
+				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
+				INFOPLIST_KEY_UISupportedInterfaceOrientations = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				IPHONEOS_DEPLOYMENT_TARGET = 17.6;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = "-ff.com.muse";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Release;
+		};
+		1D9497A32EF7E5BA00C21762 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = BY98A58282;
+				GENERATE_INFOPLIST_FILE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 26.2;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = "-ff.com.museTests";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				STRING_CATALOG_GENERATE_SYMBOLS = NO;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/muse.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/muse";
+			};
+			name = Debug;
+		};
+		1D9497A42EF7E5BA00C21762 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = BY98A58282;
+				GENERATE_INFOPLIST_FILE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 26.2;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = "-ff.com.museTests";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				STRING_CATALOG_GENERATE_SYMBOLS = NO;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/muse.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/muse";
+			};
+			name = Release;
+		};
+		1D9497A62EF7E5BA00C21762 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = BY98A58282;
+				GENERATE_INFOPLIST_FILE = YES;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = "-ff.com.museUITests";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				STRING_CATALOG_GENERATE_SYMBOLS = NO;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_TARGET_NAME = muse;
+			};
+			name = Debug;
+		};
+		1D9497A72EF7E5BA00C21762 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = BY98A58282;
+				GENERATE_INFOPLIST_FILE = YES;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = "-ff.com.museUITests";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				STRING_CATALOG_GENERATE_SYMBOLS = NO;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_TARGET_NAME = muse;
+			};
+			name = Release;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		1D9497772EF7E5B800C21762 /* Build configuration list for PBXProject "muse" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				1D94979D2EF7E5BA00C21762 /* Debug */,
+				1D94979E2EF7E5BA00C21762 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		1D94979F2EF7E5BA00C21762 /* Build configuration list for PBXNativeTarget "muse" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				1D9497A02EF7E5BA00C21762 /* Debug */,
+				1D9497A12EF7E5BA00C21762 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		1D9497A22EF7E5BA00C21762 /* Build configuration list for PBXNativeTarget "museTests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				1D9497A32EF7E5BA00C21762 /* Debug */,
+				1D9497A42EF7E5BA00C21762 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		1D9497A52EF7E5BA00C21762 /* Build configuration list for PBXNativeTarget "museUITests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				1D9497A62EF7E5BA00C21762 /* Debug */,
+				1D9497A72EF7E5BA00C21762 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+/* End XCConfigurationList section */
+
+/* Begin XCLocalSwiftPackageReference section */
+		1D9497EF2EF7EA7600C21762 /* XCLocalSwiftPackageReference "MuseSDK" */ = {
+			isa = XCLocalSwiftPackageReference;
+			relativePath = MuseSDK;
+		};
+/* End XCLocalSwiftPackageReference section */
+
+/* Begin XCRemoteSwiftPackageReference section */
+		1D9497F22EF7EAD200C21762 /* XCRemoteSwiftPackageReference "WhisperKit" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/argmaxinc/WhisperKit";
+			requirement = {
+				branch = main;
+				kind = branch;
+			};
+		};
+/* End XCRemoteSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		1D9497F02EF7EA7600C21762 /* MuseSDK */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = MuseSDK;
+		};
+		1D9497F32EF7EAD200C21762 /* WhisperKit */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 1D9497F22EF7EAD200C21762 /* XCRemoteSwiftPackageReference "WhisperKit" */;
+			productName = WhisperKit;
+		};
+		1D9497F52EF7EAD200C21762 /* whisperkit-cli */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 1D9497F22EF7EAD200C21762 /* XCRemoteSwiftPackageReference "WhisperKit" */;
+			productName = "whisperkit-cli";
+		};
+/* End XCSwiftPackageProductDependency section */
+	};
+	rootObject = 1D9497742EF7E5B800C21762 /* Project object */;
+}
