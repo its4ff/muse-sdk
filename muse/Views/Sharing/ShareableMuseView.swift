@@ -73,7 +73,7 @@ struct ShareableMuseView: View {
                         Spacer()
                         locationView(location: location, isDark: true)
                     }
-                    .padding(.horizontal, format == .story ? 56 : 72)
+                    .padding(.horizontal, format == .story ? 48 : 60)
                     .padding(.top, format == .story ? 100 : 80)
                 }
 
@@ -81,7 +81,7 @@ struct ShareableMuseView: View {
 
                 // Large text - no card, just text (mirrors minimal)
                 darkContentView
-                    .padding(.horizontal, format == .story ? 56 : 72)
+                    .padding(.horizontal, format == .story ? 48 : 60)
 
                 Spacer()
 
@@ -130,7 +130,7 @@ struct ShareableMuseView: View {
                 .font(.system(size: format == .story ? 32 : 38, weight: .regular, design: .serif))
                 .foregroundColor(Color(hex: "5A5550"))
         }
-        .padding(.horizontal, format == .story ? 56 : 72)
+        .padding(.horizontal, format == .story ? 48 : 60)
     }
 
     // MARK: - Minimal Style (Stark black text, pure background)
@@ -147,7 +147,7 @@ struct ShareableMuseView: View {
                         Spacer()
                         locationView(location: location, isDark: false)
                     }
-                    .padding(.horizontal, format == .story ? 56 : 72)
+                    .padding(.horizontal, format == .story ? 48 : 60)
                     .padding(.top, format == .story ? 100 : 80)
                 }
 
@@ -155,7 +155,7 @@ struct ShareableMuseView: View {
 
                 // Large bold text - no card, just text
                 minimalContentView
-                    .padding(.horizontal, format == .story ? 56 : 72)
+                    .padding(.horizontal, format == .story ? 48 : 60)
 
                 Spacer()
 
@@ -190,12 +190,14 @@ struct ShareableMuseView: View {
         // Quote mark scales proportionally with text
         let charCount = transcription.count
         if format == .story {
-            if charCount < 30 { return 200 }
-            else if charCount < 80 { return 160 }
+            if charCount < 20 { return 240 }
+            else if charCount < 50 { return 200 }
+            else if charCount < 100 { return 160 }
             else { return 120 }
         } else {
-            if charCount < 30 { return 180 }
-            else if charCount < 80 { return 140 }
+            if charCount < 20 { return 220 }
+            else if charCount < 50 { return 180 }
+            else if charCount < 100 { return 140 }
             else { return 120 }
         }
     }
@@ -232,7 +234,7 @@ struct ShareableMuseView: View {
                 .font(.system(size: format == .story ? 32 : 38, weight: .regular, design: .serif))
                 .foregroundColor(Color(hex: "9A9590"))
         }
-        .padding(.horizontal, format == .story ? 56 : 72)
+        .padding(.horizontal, format == .story ? 48 : 60)
     }
 
     // MARK: - Dynamic Text Sizes
@@ -240,28 +242,30 @@ struct ShareableMuseView: View {
     private var minimalTextSize: CGFloat {
         let charCount = transcription.count
 
-        // Minimal style - text is the hero, much larger
-        // A few words should dominate the screen
+        // Text is the hero - make it dominate the design
+        // Bigger sizes across the board for more impact
         if format == .story {
-            if charCount < 15 { return 140 }      // "Yes." - massive
-            else if charCount < 30 { return 110 } // Few words
-            else if charCount < 50 { return 88 }  // Short phrase
-            else if charCount < 80 { return 72 }  // One sentence
-            else if charCount < 130 { return 58 }
-            else if charCount < 200 { return 46 }
-            else if charCount < 300 { return 38 }
-            else if charCount < 420 { return 32 }
-            else { return 26 }
+            if charCount < 10 { return 180 }       // "Yes." - massive statement
+            else if charCount < 20 { return 140 }  // Few words - huge
+            else if charCount < 40 { return 110 }  // Short phrase
+            else if charCount < 70 { return 88 }   // One sentence
+            else if charCount < 110 { return 72 }
+            else if charCount < 160 { return 58 }
+            else if charCount < 220 { return 48 }
+            else if charCount < 300 { return 40 }
+            else if charCount < 400 { return 34 }
+            else { return 28 }
         } else {
-            if charCount < 15 { return 120 }
-            else if charCount < 30 { return 96 }
-            else if charCount < 50 { return 78 }
-            else if charCount < 80 { return 64 }
-            else if charCount < 130 { return 52 }
-            else if charCount < 200 { return 42 }
-            else if charCount < 300 { return 34 }
-            else if charCount < 420 { return 28 }
-            else { return 24 }
+            if charCount < 10 { return 160 }
+            else if charCount < 20 { return 120 }
+            else if charCount < 40 { return 96 }
+            else if charCount < 70 { return 78 }
+            else if charCount < 110 { return 64 }
+            else if charCount < 160 { return 52 }
+            else if charCount < 220 { return 44 }
+            else if charCount < 300 { return 36 }
+            else if charCount < 400 { return 30 }
+            else { return 26 }
         }
     }
 
