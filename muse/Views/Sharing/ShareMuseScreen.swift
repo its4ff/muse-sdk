@@ -3,7 +3,7 @@
 //  muse
 //
 //  Share screen for exporting muses as shareable images
-//  Two styles: Dark (espresso card) and Minimal (stark black text)
+//  Two styles: Dark (dark bg, light text) and Light (light bg, dark text)
 //
 
 import SwiftUI
@@ -206,18 +206,17 @@ struct ShareMuseScreen: View {
                         // Style preview circle
                         ZStack {
                             if style == .dark {
-                                // Dark style preview
+                                // Dark style preview - dark bg with light quote
                                 Circle()
-                                    .fill(
-                                        LinearGradient(
-                                            colors: [Color(hex: "3D3833"), Color(hex: "1F1D1A")],
-                                            startPoint: .topLeading,
-                                            endPoint: .bottomTrailing
-                                        )
-                                    )
+                                    .fill(Color(hex: "0F0E0D"))
                                     .frame(width: 40, height: 40)
+                                    .overlay(
+                                        Text("\u{201C}")
+                                            .font(.system(size: 18, weight: .light, design: .serif))
+                                            .foregroundColor(Color(hex: "FAF8F5"))
+                                    )
                             } else {
-                                // Minimal style preview
+                                // Light style preview - light bg with dark quote
                                 Circle()
                                     .fill(Color(hex: "FAF8F5"))
                                     .frame(width: 40, height: 40)

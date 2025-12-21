@@ -3,7 +3,7 @@
 //  muse
 //
 //  Shareable card view for exporting muses as images
-//  Two styles: Dark (espresso card) and Minimal (stark black text)
+//  Two styles: Dark (dark bg, light text) and Minimal (light bg, dark text)
 //
 
 import SwiftUI
@@ -29,13 +29,13 @@ enum ShareMuseFormat {
 // MARK: - Share Card Style
 
 enum ShareMuseStyle: String, CaseIterable {
-    case dark = "dark"      // Dark espresso card, cream text
-    case minimal = "minimal" // Pure cream background, bold black text
+    case dark = "dark"      // Dark background, light text
+    case minimal = "minimal" // Light background, dark text
 
     var displayName: String {
         switch self {
         case .dark: return "dark"
-        case .minimal: return "minimal"
+        case .minimal: return "light"
         }
     }
 }
@@ -58,110 +58,68 @@ struct ShareableMuseView: View {
         }
     }
 
-    // MARK: - Dark Style (Espresso card, cream text)
+    // MARK: - Dark Style (Dark background, light text - mirrors minimal)
 
     private var darkStyleView: some View {
         ZStack {
-            // Warm parchment gradient background
-            LinearGradient(
-                colors: [
-                    Color(hex: "F5F2ED"),  // Soft cream
-                    Color(hex: "EBE6DE"),  // Warm beige
-                    Color(hex: "DDD6CA"),  // Deeper sand
-                    Color(hex: "D0C7B8")   // Sand
-                ],
-                startPoint: .topLeading,
-                endPoint: .bottomTrailing
-            )
+            // Deep warm black background
+            Color(hex: "0F0E0D")
 
             VStack(spacing: 0) {
                 Spacer()
 
-                // Dark card
-                darkContentCard
-                    .padding(.horizontal, format == .story ? 44 : 56)
-
-                // Timestamp below card
-                darkTimestampView
-                    .padding(.top, format == .story ? 28 : 24)
+                // Large text - no card, just text (mirrors minimal)
+                darkContentView
+                    .padding(.horizontal, format == .story ? 56 : 72)
 
                 Spacer()
 
-                // Branding
-                darkBrandingView
-                    .padding(.bottom, format == .story ? 90 : 70)
+                // Footer
+                darkFooterView
+                    .padding(.bottom, format == .story ? 100 : 80)
             }
         }
         .frame(width: format.size.width, height: format.size.height)
     }
 
-    private var darkContentCard: some View {
-        VStack(alignment: .leading, spacing: format == .story ? 28 : 24) {
-            // Transcription text - cream/white on dark
+    private var darkContentView: some View {
+        VStack(alignment: .leading, spacing: format == .story ? 32 : 28) {
+            // Large opening quote mark - scales with text
+            Text("\u{201C}")
+                .font(.system(size: minimalQuoteSize, weight: .ultraLight, design: .serif))
+                .foregroundColor(Color(hex: "2A2825"))
+                .offset(x: -12, y: 16)
+
+            // Transcription - the hero of the design
             Text(transcription)
-                .font(.system(size: dynamicTextSize, weight: .regular, design: .serif))
+                .font(.system(size: minimalTextSize, weight: .regular, design: .serif))
                 .foregroundColor(Color(hex: "FAF8F5"))  // Warm white
-                .lineSpacing(format == .story ? 16 : 14)
+                .lineSpacing(minimalLineSpacing)
                 .multilineTextAlignment(.leading)
                 .fixedSize(horizontal: false, vertical: true)
-
-            // Duration badge
-            HStack(spacing: 10) {
-                Image(systemName: "waveform")
-                    .font(.system(size: format == .story ? 16 : 18, weight: .medium))
-                Text(formatDuration(duration))
-                    .font(.system(size: format == .story ? 18 : 20, weight: .medium, design: .monospaced))
-            }
-            .foregroundColor(Color(hex: "A89F94"))  // Muted cream
-            .padding(.top, 4)
         }
-        .padding(format == .story ? 52 : 64)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(
-            RoundedRectangle(cornerRadius: format == .story ? 28 : 32, style: .continuous)
-                .fill(
-                    LinearGradient(
-                        colors: [
-                            Color(hex: "3D3833"),  // Warm espresso
-                            Color(hex: "2D2A26"),  // Deep charcoal
-                            Color(hex: "1F1D1A")   // Near black
-                        ],
-                        startPoint: .topLeading,
-                        endPoint: .bottomTrailing
-                    )
-                )
-                .shadow(
-                    color: Color.black.opacity(0.4),
-                    radius: 50,
-                    x: 0,
-                    y: 25
-                )
-        )
     }
 
-    private var darkTimestampView: some View {
-        HStack(spacing: 14) {
-            Text(formattedTime)
-                .font(.system(size: format == .story ? 26 : 30, weight: .medium, design: .monospaced))
+    private var darkFooterView: some View {
+        HStack(alignment: .bottom) {
+            // Timestamp - larger and more prominent
+            VStack(alignment: .leading, spacing: 6) {
+                Text(formattedTime)
+                    .font(.system(size: format == .story ? 34 : 40, weight: .medium, design: .monospaced))
+                Text(formattedDate)
+                    .font(.system(size: format == .story ? 34 : 40, weight: .medium, design: .monospaced))
+            }
+            .foregroundColor(Color(hex: "FAF8F5"))
 
-            Text("·")
-                .font(.system(size: format == .story ? 26 : 30, weight: .bold))
+            Spacer()
 
-            Text(formattedDate)
-                .font(.system(size: format == .story ? 26 : 30, weight: .medium, design: .monospaced))
-        }
-        .foregroundColor(Color(hex: "5C5650"))  // Darker warm gray
-    }
-
-    private var darkBrandingView: some View {
-        HStack(spacing: 14) {
-            Image(systemName: "circle.circle")
-                .font(.system(size: format == .story ? 22 : 26, weight: .regular))
-
+            // Branding
             Text("muse")
-                .font(.system(size: format == .story ? 26 : 30, weight: .regular, design: .serif))
+                .font(.system(size: format == .story ? 32 : 38, weight: .regular, design: .serif))
+                .foregroundColor(Color(hex: "5A5550"))
         }
-        .foregroundColor(Color(hex: "6B6560"))
+        .padding(.horizontal, format == .story ? 56 : 72)
     }
 
     // MARK: - Minimal Style (Stark black text, pure background)
@@ -189,94 +147,100 @@ struct ShareableMuseView: View {
     }
 
     private var minimalContentView: some View {
-        VStack(alignment: .leading, spacing: format == .story ? 40 : 36) {
-            // Large opening quote mark
+        VStack(alignment: .leading, spacing: format == .story ? 32 : 28) {
+            // Large opening quote mark - scales with text
             Text("\u{201C}")
-                .font(.system(size: format == .story ? 120 : 140, weight: .light, design: .serif))
-                .foregroundColor(Color(hex: "E5E0D9"))
-                .offset(x: -8, y: 20)
+                .font(.system(size: minimalQuoteSize, weight: .ultraLight, design: .serif))
+                .foregroundColor(Color(hex: "E0DAD2"))
+                .offset(x: -12, y: 16)
 
-            // Transcription - bold black serif
+            // Transcription - the hero of the design
             Text(transcription)
                 .font(.system(size: minimalTextSize, weight: .regular, design: .serif))
                 .foregroundColor(Color(hex: "1A1816"))  // Near black
-                .lineSpacing(format == .story ? 18 : 16)
+                .lineSpacing(minimalLineSpacing)
                 .multilineTextAlignment(.leading)
                 .fixedSize(horizontal: false, vertical: true)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
     }
 
+    private var minimalQuoteSize: CGFloat {
+        // Quote mark scales proportionally with text
+        let charCount = transcription.count
+        if format == .story {
+            if charCount < 30 { return 200 }
+            else if charCount < 80 { return 160 }
+            else { return 120 }
+        } else {
+            if charCount < 30 { return 180 }
+            else if charCount < 80 { return 140 }
+            else { return 120 }
+        }
+    }
+
+    private var minimalLineSpacing: CGFloat {
+        // Tighter line spacing for larger text
+        let charCount = transcription.count
+        if format == .story {
+            if charCount < 50 { return 12 }
+            else if charCount < 130 { return 16 }
+            else { return 20 }
+        } else {
+            if charCount < 50 { return 10 }
+            else if charCount < 130 { return 14 }
+            else { return 18 }
+        }
+    }
+
     private var minimalFooterView: some View {
-        HStack {
-            // Timestamp
-            VStack(alignment: .leading, spacing: 4) {
+        HStack(alignment: .bottom) {
+            // Timestamp - larger and more prominent
+            VStack(alignment: .leading, spacing: 6) {
                 Text(formattedTime)
-                    .font(.system(size: format == .story ? 22 : 26, weight: .medium, design: .monospaced))
+                    .font(.system(size: format == .story ? 34 : 40, weight: .medium, design: .monospaced))
                 Text(formattedDate)
-                    .font(.system(size: format == .story ? 22 : 26, weight: .medium, design: .monospaced))
+                    .font(.system(size: format == .story ? 34 : 40, weight: .medium, design: .monospaced))
             }
-            .foregroundColor(Color(hex: "3D3833"))
+            .foregroundColor(Color(hex: "1A1816"))
 
             Spacer()
 
             // Branding
-            HStack(spacing: 12) {
-                Image(systemName: "circle.circle")
-                    .font(.system(size: format == .story ? 20 : 24, weight: .regular))
-
-                Text("muse")
-                    .font(.system(size: format == .story ? 24 : 28, weight: .regular, design: .serif))
-            }
-            .foregroundColor(Color(hex: "9A9590"))
+            Text("muse")
+                .font(.system(size: format == .story ? 32 : 38, weight: .regular, design: .serif))
+                .foregroundColor(Color(hex: "9A9590"))
         }
         .padding(.horizontal, format == .story ? 56 : 72)
     }
 
     // MARK: - Dynamic Text Sizes
 
-    private var dynamicTextSize: CGFloat {
-        let charCount = transcription.count
-
-        if format == .story {
-            if charCount < 50 { return 64 }
-            else if charCount < 100 { return 52 }
-            else if charCount < 160 { return 42 }
-            else if charCount < 240 { return 34 }
-            else if charCount < 340 { return 28 }
-            else if charCount < 480 { return 24 }
-            else { return 20 }
-        } else {
-            if charCount < 50 { return 56 }
-            else if charCount < 100 { return 46 }
-            else if charCount < 160 { return 38 }
-            else if charCount < 240 { return 32 }
-            else if charCount < 340 { return 26 }
-            else if charCount < 480 { return 22 }
-            else { return 18 }
-        }
-    }
-
     private var minimalTextSize: CGFloat {
         let charCount = transcription.count
 
-        // Minimal style uses larger text since there's no card
+        // Minimal style - text is the hero, much larger
+        // A few words should dominate the screen
         if format == .story {
-            if charCount < 40 { return 80 }
-            else if charCount < 80 { return 64 }
-            else if charCount < 140 { return 52 }
-            else if charCount < 220 { return 42 }
-            else if charCount < 320 { return 34 }
-            else if charCount < 450 { return 28 }
-            else { return 24 }
+            if charCount < 15 { return 140 }      // "Yes." - massive
+            else if charCount < 30 { return 110 } // Few words
+            else if charCount < 50 { return 88 }  // Short phrase
+            else if charCount < 80 { return 72 }  // One sentence
+            else if charCount < 130 { return 58 }
+            else if charCount < 200 { return 46 }
+            else if charCount < 300 { return 38 }
+            else if charCount < 420 { return 32 }
+            else { return 26 }
         } else {
-            if charCount < 40 { return 72 }
-            else if charCount < 80 { return 58 }
-            else if charCount < 140 { return 48 }
-            else if charCount < 220 { return 38 }
-            else if charCount < 320 { return 30 }
-            else if charCount < 450 { return 26 }
-            else { return 22 }
+            if charCount < 15 { return 120 }
+            else if charCount < 30 { return 96 }
+            else if charCount < 50 { return 78 }
+            else if charCount < 80 { return 64 }
+            else if charCount < 130 { return 52 }
+            else if charCount < 200 { return 42 }
+            else if charCount < 300 { return 34 }
+            else if charCount < 420 { return 28 }
+            else { return 24 }
         }
     }
 
@@ -317,7 +281,18 @@ extension ShareableMuseView {
 
 // MARK: - Previews
 
-#Preview("Dark - Story") {
+#Preview("Dark - Short") {
+    ShareableMuseView(
+        transcription: "Hello.",
+        timestamp: Date(),
+        duration: 1.2,
+        format: .story,
+        style: .dark
+    )
+    .frame(width: 360, height: 640)
+}
+
+#Preview("Dark - Medium") {
     ShareableMuseView(
         transcription: "Sometimes the quiet moments speak the loudest.",
         timestamp: Date(),
@@ -328,18 +303,29 @@ extension ShareableMuseView {
     .frame(width: 360, height: 640)
 }
 
-#Preview("Dark - Feed") {
+#Preview("Dark - Long") {
     ShareableMuseView(
-        transcription: "I've been thinking about how we measure success. It's not about the destination, it's about who you become along the way.",
+        transcription: "I've been thinking about how we measure success. It's not about the destination, it's about who you become along the way. The journey shapes us.",
         timestamp: Date(),
         duration: 18.7,
-        format: .feed,
+        format: .story,
         style: .dark
     )
-    .frame(width: 480, height: 360)
+    .frame(width: 360, height: 640)
 }
 
-#Preview("Minimal - Story") {
+#Preview("Minimal - Short") {
+    ShareableMuseView(
+        transcription: "Yes.",
+        timestamp: Date(),
+        duration: 0.8,
+        format: .story,
+        style: .minimal
+    )
+    .frame(width: 360, height: 640)
+}
+
+#Preview("Minimal - Medium") {
     ShareableMuseView(
         transcription: "Sometimes the quiet moments speak the loudest.",
         timestamp: Date(),
@@ -350,13 +336,13 @@ extension ShareableMuseView {
     .frame(width: 360, height: 640)
 }
 
-#Preview("Minimal - Feed") {
+#Preview("Minimal - Long") {
     ShareableMuseView(
-        transcription: "I've been thinking about how we measure success. It's not about the destination, it's about who you become along the way.",
+        transcription: "I've been thinking about how we measure success. It's not about the destination, it's about who you become along the way. The journey shapes us.",
         timestamp: Date(),
         duration: 18.7,
-        format: .feed,
+        format: .story,
         style: .minimal
     )
-    .frame(width: 480, height: 360)
+    .frame(width: 360, height: 640)
 }
