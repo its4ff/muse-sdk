@@ -710,12 +710,7 @@ final class RingManager {
         } else if let existingMac = savedMacAddress, !existingMac.isEmpty {
             // Keep existing MAC (was saved from scan data)
             macAddress = existingMac
-            print("[RingManager] Keeping MAC from scan: \(existingMac)")
         }
-
-        print("[RingManager] Device saved for reconnection")
-        print("[RingManager]   MAC: \(savedMacAddress ?? "nil")")
-        print("[RingManager]   UUID: \(savedUUID ?? "nil")")
     }
 
     /// Forget the saved device (user wants to connect a new ring)
@@ -729,8 +724,6 @@ final class RingManager {
         deviceName = nil
         macAddress = nil
         currentDevice = nil
-
-        print("[RingManager] Device forgotten (will do full bind on next connection)")
     }
 
     // MARK: - Bind/Connect (Compound Commands)
@@ -829,8 +822,6 @@ final class RingManager {
 
     /// Handle successful connect response (similar to bind but different response type)
     private func handleConnectSuccess(_ response: BCLConnectRingResponse) {
-        print("[RingManager] Reconnect successful")
-
         // Extract device capabilities (same fields as bind response)
         isMicrophoneSupported = response.isMicrophoneSupported
         firmwareVersion = response.firmwareVersion
@@ -839,11 +830,7 @@ final class RingManager {
         let rawBattery = Int(response.batteryLevel)
         updateBatteryState(rawBattery: rawBattery)
 
-        print("[RingManager] Firmware: \(response.firmwareVersion)")
-        print("[RingManager] Hardware: \(response.hardwareVersion)")
-        print("[RingManager] Mic supported: \(isMicrophoneSupported)")
-        print("[RingManager] Touch audio supported: \(response.isTouchAudioUploadSupported)")
-        print("[RingManager] Battery raw: \(rawBattery), display: \(batteryLevel)%, charging: \(isCharging)")
+        print("[RingManager] Reconnected (FW: \(response.firmwareVersion), battery: \(batteryLevel)%\(isCharging ? " charging" : ""))")
 
         state = .connected
         reconnectAttempts = 0
@@ -851,18 +838,13 @@ final class RingManager {
         // Configure audio mode with proper timing
         if isMicrophoneSupported && !isCharging {
             Task {
-                // Wait 300ms before next command (inter-command delay)
                 try? await Task.sleep(nanoseconds: SDKTiming.interCommandDelay)
                 await configureHIDMode()
             }
-        } else if isCharging {
-            print("[RingManager] Skipping audio setup - ring is charging")
         }
     }
 
     private func handleBindSuccess(_ response: BCLBindRingResponse) {
-        print("[RingManager] Bind successful")
-
         // Extract device capabilities
         isMicrophoneSupported = response.isMicrophoneSupported
         firmwareVersion = response.firmwareVersion
@@ -872,12 +854,7 @@ final class RingManager {
         let rawBattery = Int(response.batteryLevel)
         updateBatteryState(rawBattery: rawBattery)
 
-        print("[RingManager] Firmware: \(response.firmwareVersion)")
-        print("[RingManager] Hardware: \(response.hardwareVersion)")
-        print("[RingManager] Mic supported: \(isMicrophoneSupported)")
-        print("[RingManager] Touch audio supported: \(response.isTouchAudioUploadSupported)")
-        print("[RingManager] Gesture music control supported: \(isGestureMusicControlSupported)")
-        print("[RingManager] Battery raw: \(rawBattery), display: \(batteryLevel)%, charging: \(isCharging)")
+        print("[RingManager] Connected (FW: \(response.firmwareVersion), battery: \(batteryLevel)%\(isCharging ? " charging" : ""))")
 
         state = .connected
         reconnectAttempts = 0
@@ -886,12 +863,9 @@ final class RingManager {
         // Only configure if not charging (audio doesn't work while charging)
         if isMicrophoneSupported && !isCharging {
             Task {
-                // Wait 300ms before next command (inter-command delay from SDK docs)
                 try? await Task.sleep(nanoseconds: SDKTiming.interCommandDelay)
                 await configureHIDMode()
             }
-        } else if isCharging {
-            print("[RingManager] Skipping audio setup - ring is charging")
         }
     }
 
@@ -912,14 +886,12 @@ final class RingManager {
             } else {
                 batteryLevel = 0
             }
-            print("[RingManager] Ring is charging")
 
         case 102:
             isCharging = true
             chargingState = "Charged"
             batteryLevel = 100
             lastKnownBattery = 100
-            print("[RingManager] Ring is fully charged")
 
         case 0...100:
             isCharging = false
@@ -928,8 +900,7 @@ final class RingManager {
             lastKnownBattery = rawBattery
 
         default:
-            // Unknown value - keep current state
-            print("[RingManager] Unknown battery value: \(rawBattery)")
+            break // Unknown value - keep current state
         }
     }
 
@@ -942,46 +913,27 @@ final class RingManager {
     private func configureHIDMode(retryCount: Int = 0) async {
         let maxRetries = 2
 
-        guard isMicrophoneSupported else {
-            print("[RingManager] Microphone not supported")
-            return
-        }
-
-        guard !isCharging else {
-            print("[RingManager] Cannot configure audio while charging")
-            return
-        }
-
-        guard state == .connected else {
-            print("[RingManager] Cannot configure HID - not connected (state: \(state))")
-            return
-        }
-
-        print("[RingManager] Configuring HID mode for audio (attempt \(retryCount + 1)/\(maxRetries + 1))...")
+        guard isMicrophoneSupported, !isCharging, state == .connected else { return }
 
         // Step 1: Set audio format to ADPCM with retry
         let formatResult = await setAudioFormat()
 
         switch formatResult {
         case .success:
-            print("[RingManager] Audio format set to ADPCM")
+            break
         case .timeout:
-            print("[RingManager] Audio format command timed out")
             if retryCount < maxRetries {
-                print("[RingManager] Retrying after delay...")
-                try? await Task.sleep(nanoseconds: SDKTiming.interCommandDelay * 3)  // 900ms retry delay
+                try? await Task.sleep(nanoseconds: SDKTiming.interCommandDelay * 3)
                 await configureHIDMode(retryCount: retryCount + 1)
                 return
             } else {
-                print("[RingManager] Max retries reached for audio format")
                 return
             }
         case .failed:
-            print("[RingManager] Audio format setup failed")
             return
         }
 
-        // CRITICAL: Wait 300ms between commands (SDK requirement)
+        // Wait 300ms between commands (SDK requirement)
         try? await Task.sleep(nanoseconds: SDKTiming.interCommandDelay)
 
         // Step 2: Set up audio data callback BEFORE setting HID mode
@@ -992,16 +944,14 @@ final class RingManager {
 
         switch hidResult {
         case .success:
-            print("[RingManager] Audio setup complete - hold ring to record")
+            print("[RingManager] Voice mode ready")
         case .timeout:
-            print("[RingManager] HID mode command timed out")
             if retryCount < maxRetries {
-                print("[RingManager] Retrying HID setup after delay...")
-                try? await Task.sleep(nanoseconds: SDKTiming.interCommandDelay * 3)  // 900ms retry delay
+                try? await Task.sleep(nanoseconds: SDKTiming.interCommandDelay * 3)
                 await configureHIDMode(retryCount: retryCount + 1)
             }
         case .failed:
-            print("[RingManager] HID mode setup failed")
+            break
         }
     }
 
@@ -1012,22 +962,18 @@ final class RingManager {
     }
 
     /// Set audio format with timeout detection
-    /// Uses a manual timeout to prevent continuation leaks when ring disconnects
     private func setAudioFormat() async -> AudioSetupResult {
-        // Use a task with timeout to prevent continuation leaks
         return await withTaskCancellationHandler {
             await withCheckedContinuation { continuation in
                 var hasResumed = false
                 let resumeLock = NSLock()
 
-                // Safety timeout - if SDK doesn't respond in 10 seconds, consider it a timeout
                 let timeoutTask = Task {
                     try? await Task.sleep(nanoseconds: UInt64(SDKTiming.commandTimeout * 1_000_000_000))
                     resumeLock.lock()
                     if !hasResumed {
                         hasResumed = true
                         resumeLock.unlock()
-                        print("[RingManager] setAudioFormat safety timeout triggered")
                         continuation.resume(returning: .timeout)
                     } else {
                         resumeLock.unlock()
@@ -1050,7 +996,6 @@ final class RingManager {
                         if response.status == 0 || response.status == 1 || response.status == 54 {
                             continuation.resume(returning: .success)
                         } else {
-                            print("[RingManager] Audio format unexpected status: \(response.status)")
                             continuation.resume(returning: .failed)
                         }
                     case .failure(let error):
@@ -1058,15 +1003,12 @@ final class RingManager {
                         if errorString.contains("timeout") || errorString.contains("超时") {
                             continuation.resume(returning: .timeout)
                         } else {
-                            print("[RingManager] Audio format error: \(error)")
                             continuation.resume(returning: .failed)
                         }
                     }
                 }
             }
-        } onCancel: {
-            print("[RingManager] setAudioFormat task cancelled")
-        }
+        } onCancel: { }
     }
 
     /// Set HID mode for audio recording with timeout protection
@@ -1076,14 +1018,12 @@ final class RingManager {
                 var hasResumed = false
                 let resumeLock = NSLock()
 
-                // Safety timeout
                 let timeoutTask = Task {
                     try? await Task.sleep(nanoseconds: UInt64(SDKTiming.commandTimeout * 1_000_000_000))
                     resumeLock.lock()
                     if !hasResumed {
                         hasResumed = true
                         resumeLock.unlock()
-                        print("[RingManager] setHIDModeForAudio safety timeout triggered")
                         continuation.resume(returning: .timeout)
                     } else {
                         resumeLock.unlock()
@@ -1092,7 +1032,7 @@ final class RingManager {
 
                 BCLRingManager.shared.setHIDMode(
                     touchMode: 4,      // Audio upload (tap-hold to record)
-                    gestureMode: 255,  // Off (or 2 for music control)
+                    gestureMode: 255,  // Off
                     systemType: 1,     // iOS
                     deviceModelName: BCLRingManager.shared.getMobileDeviceModelName(),
                     screenHeightPixel: BCLRingManager.shared.getMobileDeviceScreenHeightPixel(),
@@ -1108,23 +1048,19 @@ final class RingManager {
                     resumeLock.unlock()
 
                     switch result {
-                    case .success(let response):
-                        print("[RingManager] HID mode configured (status: \(response.status))")
+                    case .success:
                         continuation.resume(returning: .success)
                     case .failure(let error):
                         let errorString = String(describing: error)
                         if errorString.contains("timeout") || errorString.contains("超时") {
                             continuation.resume(returning: .timeout)
                         } else {
-                            print("[RingManager] HID mode error: \(error)")
                             continuation.resume(returning: .failed)
                         }
                     }
                 }
             }
-        } onCancel: {
-            print("[RingManager] setHIDModeForAudio task cancelled")
-        }
+        } onCancel: { }
     }
 
     /// Set up callback to receive audio data from ring touch gestures
@@ -1134,14 +1070,12 @@ final class RingManager {
                 self?.handleAudioPacket(dataLength: dataLength, seq: seq, audioData: audioData, isEnd: isEnd)
             }
         }
-        print("[RingManager] Audio callback configured")
     }
 
     /// Handle incoming audio packet from ring
     private func handleAudioPacket(dataLength: Int, seq: Int, audioData: [Int], isEnd: Bool) {
         // Start recording on first audio data
         if !isRecording && !audioData.isEmpty {
-            print("[RingManager] Recording started (seq=\(seq))")
             isRecording = true
             currentPackets = []
             recordingStartTime = Date()
@@ -1161,7 +1095,6 @@ final class RingManager {
 
         // Handle end signal
         if isEnd && isRecording {
-            print("[RingManager] Recording ended via isEnd flag (\(currentPackets.count) packets)")
             finalizeRecording()
         }
     }
@@ -1175,7 +1108,6 @@ final class RingManager {
             guard let self else { return }
             Task { @MainActor [weak self] in
                 guard let self, self.isRecording, !self.currentPackets.isEmpty else { return }
-                print("[RingManager] Recording ended via silence timeout (\(self.currentPackets.count) packets)")
                 self.finalizeRecording()
             }
         }
@@ -1192,10 +1124,7 @@ final class RingManager {
         let endTime = Date()
         let startTime = recordingStartTime ?? endTime
 
-        guard !currentPackets.isEmpty else {
-            print("[RingManager] No audio packets to finalize")
-            return
-        }
+        guard !currentPackets.isEmpty else { return }
 
         let session = AudioSession(
             packets: currentPackets,
@@ -1203,10 +1132,7 @@ final class RingManager {
             endTime: endTime
         )
 
-        print("[RingManager] Publishing audio session:")
-        print("[RingManager]   Duration: \(String(format: "%.2f", session.duration))s")
-        print("[RingManager]   Packets: \(currentPackets.count)")
-        print("[RingManager]   Total samples: \(session.sortedSamples.count)")
+        print("[RingManager] Recording: \(String(format: "%.1f", session.duration))s, \(currentPackets.count) packets")
 
         // Publish for transcription
         audioSessionPublisher.send(session)
@@ -1220,12 +1146,7 @@ final class RingManager {
 
     /// Refresh battery level and device info using appEventRefreshRing
     func refresh() async {
-        guard isConnected else {
-            print("[RingManager] Cannot refresh - not connected")
-            return
-        }
-
-        print("[RingManager] Refreshing device info...")
+        guard isConnected else { return }
 
         let wasCharging = isCharging
 
@@ -1250,10 +1171,8 @@ final class RingManager {
                         let rawBattery = Int(response.batteryLevel)
                         self?.updateBatteryState(rawBattery: rawBattery)
                         self?.firmwareVersion = response.firmwareVersion
-                        print("[RingManager] Refreshed - Battery raw: \(rawBattery), charging: \(self?.isCharging ?? false)")
-
-                    case .failure(let error):
-                        print("[RingManager] Refresh failed: \(error)")
+                    case .failure:
+                        break
                     }
                     continuation.resume()
                 }
@@ -1262,8 +1181,6 @@ final class RingManager {
 
         // If ring was charging but now isn't, setup audio
         if wasCharging && !isCharging && isMicrophoneSupported {
-            print("[RingManager] Ring removed from charger - setting up audio")
-            // Minimal delay (official app uses none)
             let delay: UInt64 = connectionMode == .sdk ? 500_000_000 : 100_000_000
             try? await Task.sleep(nanoseconds: delay)
             await configureHIDMode()
@@ -1290,7 +1207,6 @@ final class RingManager {
         currentDevice = nil
         currentPackets = []
         recordingStartTime = nil
-        print("[RingManager] Disconnected")
     }
 
     // MARK: - HID Mode Switching (Voice vs Music Control)
@@ -1298,74 +1214,46 @@ final class RingManager {
     /// Toggle between voice capture mode and music control mode
     /// - Parameter musicMode: true for music control, false for voice capture
     ///
-    /// IMPORTANT: For gesture music control to work:
-    /// 1. Ring must support `isGestureMusicControlSupported` (check bind response)
-    /// 2. Ring must be HID-paired at iOS system level (Settings > Bluetooth)
-    /// 3. gestureMode=2 sends HID media keys directly to iOS - no app callback needed
+    /// Music control mode:
+    /// - touchMode=2: Tap ring = play/pause
+    /// - gestureMode=2: Swipe in air = next/prev track
+    /// Ring must be HID-paired at iOS system level (Settings > Bluetooth shows ring)
     func setMusicControlMode(_ musicMode: Bool) {
         guard isConnected else {
             print("[RingManager] Cannot set mode - not connected")
             return
         }
 
-        print("[RingManager] Setting mode to \(musicMode ? "music control" : "voice capture")...")
+        print("[RingManager] Switching to \(musicMode ? "music" : "voice") mode")
 
         Task {
+            // Add delay before switching modes (SDK requires 300ms between commands)
+            try? await Task.sleep(nanoseconds: SDKTiming.interCommandDelay)
+
             if musicMode {
-                // Check if ring supports gesture music control
-                if !isGestureMusicControlSupported {
-                    print("[RingManager] WARNING: Ring may not support gesture music control")
-                    print("[RingManager] Proceeding anyway - ring might still work via HID pairing")
-                }
-
-                // Music mode: disable touch audio, enable gesture music
-                // CRITICAL: Add delay before switching modes (SDK requires 300ms between commands)
-                try? await Task.sleep(nanoseconds: SDKTiming.interCommandDelay)
-
                 let success = await setHIDModeForMusic()
-                if success {
-                    isMusicControlMode = true
-                    // Verify mode was set correctly
-                    await verifyHIDMode()
-                    // Also read current gesture functions to see what's configured
-                    try? await Task.sleep(nanoseconds: SDKTiming.interCommandDelay)
-                    await readGestureFunctions()
-                } else {
-                    print("[RingManager] Failed to enable music control mode")
+                isMusicControlMode = success
+                if !success {
+                    print("[RingManager] Failed to enable music mode")
                 }
             } else {
-                // Voice mode: enable touch audio
-                // CRITICAL: Add delay before switching modes
-                try? await Task.sleep(nanoseconds: SDKTiming.interCommandDelay)
-
                 await configureHIDMode()
                 isMusicControlMode = false
             }
         }
     }
 
-    /// Set HID mode for music control (swipe gestures for next/prev track)
-    /// From SDK docs: gestureMode=2 enables music control HID gestures (BCLGestureHIDModeMusicMode)
+    /// Set HID mode for music control
+    /// From SDK docs:
+    /// - touchMode=2: Music control via touch (tap = play/pause)
+    /// - gestureMode=2: Music control via air swipe (swipe = next/prev track)
     ///
-    /// IMPORTANT: For music gestures to work:
-    /// 1. Ring must be HID-paired at iOS system level (Settings > Bluetooth shows ring)
-    /// 2. gestureMode=2 sends HID Consumer Control keys directly to iOS
-    /// 3. No app callback - gestures go directly to iOS media control
-    /// 4. setGestureFunction may return 255 (not supported) - this is OK
-    ///
-    /// Default HID music gestures (when gestureMode=2):
-    /// - Swipe Up: Next Track (HID Consumer Control)
-    /// - Swipe Down: Previous Track (HID Consumer Control)
-    /// - Snap/Pinch: Play/Pause (HID Consumer Control)
+    /// Ring sends HID Consumer Control keys directly to iOS - no app callback needed.
+    /// Ring must be HID-paired at iOS system level (Settings > Bluetooth shows ring).
     private func setHIDModeForMusic() async -> Bool {
-        print("[RingManager] Configuring music control mode...")
-        print("[RingManager]   isGestureMusicControlSupported: \(isGestureMusicControlSupported)")
+        print("[RingManager] Setting music control mode (touch=2, gesture=2)...")
 
-        // First, check what HID functions the ring supports
-        await checkHIDFunctionCode()
-
-        // Step 1: Set HID mode to music (gestureMode=2)
-        let hidModeSuccess = await withCheckedContinuation { continuation in
+        return await withCheckedContinuation { continuation in
             var hasResumed = false
             let resumeLock = NSLock()
 
@@ -1375,16 +1263,19 @@ final class RingManager {
                 if !hasResumed {
                     hasResumed = true
                     resumeLock.unlock()
-                    print("[RingManager] setHIDModeForMusic safety timeout triggered")
+                    print("[RingManager] setHIDMode timeout")
                     continuation.resume(returning: false)
                 } else {
                     resumeLock.unlock()
                 }
             }
 
+            // Enable BOTH touch and gesture for music control
+            // touchMode=2: Tap ring surface = play/pause
+            // gestureMode=2: Swipe in air = next/prev track
             BCLRingManager.shared.setHIDMode(
-                touchMode: 255,    // Disable touch (no audio upload)
-                gestureMode: 2,    // Music control mode
+                touchMode: 2,      // Music control via touch
+                gestureMode: 2,    // Music control via gesture
                 systemType: 1,     // iOS
                 deviceModelName: BCLRingManager.shared.getMobileDeviceModelName(),
                 screenHeightPixel: BCLRingManager.shared.getMobileDeviceScreenHeightPixel(),
@@ -1401,173 +1292,11 @@ final class RingManager {
 
                 switch result {
                 case .success(let response):
-                    print("[RingManager] Music HID mode set (status: \(response.status))")
+                    print("[RingManager] Music mode set (status: \(response.status))")
                     continuation.resume(returning: response.status == 0 || response.status == 1)
                 case .failure(let error):
-                    print("[RingManager] Music HID mode failed: \(error)")
+                    print("[RingManager] Music mode failed: \(error)")
                     continuation.resume(returning: false)
-                }
-            }
-        }
-
-        guard hidModeSuccess else { return false }
-
-        // Step 2: Wait before next command
-        try? await Task.sleep(nanoseconds: SDKTiming.interCommandDelay)
-
-        // Step 3: Configure gesture functions for music control
-        // Gesture values (from SDK docs):
-        // 1 = play/pause, 2 = next track, 3 = previous track
-        // 4 = volume up, 5 = volume down, 6 = photo, 255 = disabled
-        let gestureFunctionSuccess = await configureGestureFunctions(
-            swipeUp: 2,     // Next track
-            swipeDown: 3,   // Previous track
-            snap: 1,        // Play/pause
-            pinch: 255      // Disabled
-        )
-
-        if gestureFunctionSuccess {
-            print("[RingManager] Music control fully configured")
-        }
-
-        return hidModeSuccess  // Return true even if gesture config fails (HID mode is set)
-    }
-
-    /// Configure what each gesture does
-    /// Values: 1=play/pause, 2=next, 3=prev, 4=vol+, 5=vol-, 6=photo, 255=disabled
-    ///
-    /// NOTE: setStatus=255 from the ring typically means the gesture function configuration
-    /// is not supported. This is OK if gestureMode=2 is set - the ring will send HID media
-    /// keys directly to iOS without needing custom gesture function mapping.
-    private func configureGestureFunctions(swipeUp: Int, swipeDown: Int, snap: Int, pinch: Int) async -> Bool {
-        return await withCheckedContinuation { continuation in
-            var hasResumed = false
-            let resumeLock = NSLock()
-
-            let timeoutTask = Task {
-                try? await Task.sleep(nanoseconds: UInt64(SDKTiming.commandTimeout * 1_000_000_000))
-                resumeLock.lock()
-                if !hasResumed {
-                    hasResumed = true
-                    resumeLock.unlock()
-                    print("[RingManager] configureGestureFunctions timeout")
-                    continuation.resume(returning: false)
-                } else {
-                    resumeLock.unlock()
-                }
-            }
-
-            BCLRingManager.shared.setGestureFunction(
-                swipeUpGesture: swipeUp,
-                swipeDownGesture: swipeDown,
-                snapGesture: snap,
-                pinchGesture: pinch
-            ) { result in
-                timeoutTask.cancel()
-                resumeLock.lock()
-                guard !hasResumed else {
-                    resumeLock.unlock()
-                    return
-                }
-                hasResumed = true
-                resumeLock.unlock()
-
-                switch result {
-                case .success(let response):
-                    let status = response.setStatus ?? -1
-                    print("[RingManager] Gesture functions response (status: \(status))")
-                    print("[RingManager]   Requested: swipeUp=\(swipeUp), swipeDown=\(swipeDown), snap=\(snap)")
-
-                    if status == 255 {
-                        print("[RingManager]   Status 255 = Not supported or using default HID mapping")
-                        print("[RingManager]   This is OK - ring will use built-in music HID keys")
-                    } else if status == 0 {
-                        print("[RingManager]   Status 0 = Success, custom gesture functions applied")
-                    }
-
-                    // Return true either way - status 255 just means use defaults
-                    continuation.resume(returning: true)
-                case .failure(let error):
-                    print("[RingManager] Gesture function config failed: \(error)")
-                    continuation.resume(returning: false)
-                }
-            }
-        }
-    }
-
-    /// Read current gesture function configuration
-    private func readGestureFunctions() async {
-        await withCheckedContinuation { (continuation: CheckedContinuation<Void, Never>) in
-            BCLRingManager.shared.readGestureFunction { result in
-                switch result {
-                case .success(let response):
-                    print("[RingManager] Current gesture functions:")
-                    print("[RingManager]   Swipe up: \(response.swipeUpGesture ?? -1) (2=next track)")
-                    print("[RingManager]   Swipe down: \(response.swipeDownGesture ?? -1) (3=prev track)")
-                    print("[RingManager]")
-                    print("[RingManager] === MUSIC CONTROL READY ===")
-                    print("[RingManager] HID pairing confirmed (ring visible in iOS Bluetooth)")
-                    print("[RingManager] Gesture mode set to music (2)")
-                    print("[RingManager]")
-                    print("[RingManager] To test: Open Apple Music, play a song, then:")
-                    print("[RingManager]   - Swipe UP on ring = Next track")
-                    print("[RingManager]   - Swipe DOWN on ring = Previous track")
-                case .failure(let error):
-                    print("[RingManager] Failed to read gesture functions: \(error)")
-                    print("[RingManager] This may be normal - ring might not support reading gesture config")
-                    print("[RingManager]")
-                    print("[RingManager] === MUSIC CONTROL SHOULD STILL WORK ===")
-                    print("[RingManager] gestureMode=2 is set - ring sends HID media keys directly to iOS")
-                    print("[RingManager] Open Apple Music, play a song, swipe UP/DOWN on ring")
-                }
-                continuation.resume()
-            }
-        }
-    }
-
-    /// Verify current HID mode after setting
-    private func verifyHIDMode() async {
-        await withCheckedContinuation { (continuation: CheckedContinuation<Void, Never>) in
-            BCLRingManager.shared.getCurrentHIDMode { result in
-                switch result {
-                case .success(let response):
-                    print("[RingManager] Current HID mode verified:")
-                    print("[RingManager]   Touch HID mode: \(response.touchHIDMode)")
-                    print("[RingManager]   Gesture HID mode: \(response.gestureHIDMode)")
-                    print("[RingManager]   System type: \(response.systemType)")
-                case .failure(let error):
-                    print("[RingManager] Failed to verify HID mode: \(error)")
-                }
-                continuation.resume()
-            }
-        }
-    }
-
-    /// Check what HID functions the ring supports
-    /// This helps diagnose whether music control gestures are available
-    private func checkHIDFunctionCode() async {
-        await withCheckedContinuation { (continuation: CheckedContinuation<Void, Never>) in
-            BCLRingManager.shared.getHIDFunctionCode { [weak self] result in
-                Task { @MainActor in
-                    switch result {
-                    case .success(let response):
-                        print("[RingManager] HID Function Code Response:")
-                        print("[RingManager]   isHIDSupported: \(response.isHIDSupported)")
-                        print("[RingManager]   isTouchMusicControlSupported: \(response.isTouchMusicControlSupported)")
-                        print("[RingManager]   isGestureMusicControlSupported: \(response.isGestureMusicControlSupported)")
-                        print("[RingManager]   isTouchAudioUploadSupported: \(response.isTouchAudioUploadSupported)")
-                        print("[RingManager]   touchFunctionByte: \(response.touchFunctionByte)")
-                        print("[RingManager]   gestureFunctionByte: \(response.gestureFunctionByte)")
-                        print("[RingManager]   hasAnyGestureFunction: \(response.hasAnyGestureFunction)")
-                        print("[RingManager]   supportedFunctions: \(response.supportedFunctionsDescription)")
-
-                        // Update our tracked capability
-                        self?.isGestureMusicControlSupported = response.isGestureMusicControlSupported
-
-                    case .failure(let error):
-                        print("[RingManager] Failed to get HID function code: \(error)")
-                    }
-                    continuation.resume()
                 }
             }
         }
