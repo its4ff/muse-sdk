@@ -181,6 +181,21 @@ struct HomeView: View {
                             .font(.museMicro)
                             .foregroundColor(.museTextSecondary)
                     }
+
+                    Spacer()
+
+                    // Stop button to cancel reconnection
+                    Button {
+                        ringManager.disconnect()
+                    } label: {
+                        Image(systemName: "xmark")
+                            .font(.system(size: 12, weight: .medium))
+                            .foregroundColor(.museTextTertiary)
+                            .padding(Spacing.xs)
+                            .background(Color.museBackgroundSecondary)
+                            .clipShape(Circle())
+                    }
+                    .buttonStyle(.plain)
                 } else {
                     // Disconnected
                     if ringManager.hasSavedDevice {
