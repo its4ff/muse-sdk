@@ -73,7 +73,7 @@ struct ShareableMuseView: View {
                         Spacer()
                         locationView(location: location, isDark: true)
                     }
-                    .padding(.horizontal, format == .story ? 48 : 60)
+                    .padding(.horizontal, format == .story ? 60 : 76)
                     .padding(.top, format == .story ? 100 : 80)
                 }
 
@@ -81,7 +81,7 @@ struct ShareableMuseView: View {
 
                 // Large text - no card, just text (mirrors minimal)
                 darkContentView
-                    .padding(.horizontal, format == .story ? 48 : 60)
+                    .padding(.horizontal, format == .story ? 60 : 76)
 
                 Spacer()
 
@@ -130,7 +130,7 @@ struct ShareableMuseView: View {
                 .font(.system(size: format == .story ? 32 : 38, weight: .regular, design: .serif))
                 .foregroundColor(Color(hex: "5A5550"))
         }
-        .padding(.horizontal, format == .story ? 48 : 60)
+        .padding(.horizontal, format == .story ? 64 : 80)
     }
 
     // MARK: - Minimal Style (Stark black text, pure background)
@@ -147,7 +147,7 @@ struct ShareableMuseView: View {
                         Spacer()
                         locationView(location: location, isDark: false)
                     }
-                    .padding(.horizontal, format == .story ? 48 : 60)
+                    .padding(.horizontal, format == .story ? 64 : 80)
                     .padding(.top, format == .story ? 100 : 80)
                 }
 
@@ -155,7 +155,7 @@ struct ShareableMuseView: View {
 
                 // Large bold text - no card, just text
                 minimalContentView
-                    .padding(.horizontal, format == .story ? 48 : 60)
+                    .padding(.horizontal, format == .story ? 64 : 80)
 
                 Spacer()
 
@@ -234,7 +234,7 @@ struct ShareableMuseView: View {
                 .font(.system(size: format == .story ? 32 : 38, weight: .regular, design: .serif))
                 .foregroundColor(Color(hex: "9A9590"))
         }
-        .padding(.horizontal, format == .story ? 48 : 60)
+        .padding(.horizontal, format == .story ? 64 : 80)
     }
 
     // MARK: - Dynamic Text Sizes
