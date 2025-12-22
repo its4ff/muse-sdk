@@ -49,6 +49,10 @@ struct MainTabView: View {
             setupAppLevelAudioListener()
             setupLocationService()
         }
+        .onReceive(NotificationCenter.default.publisher(for: UIApplication.willEnterForegroundNotification)) { _ in
+            // Check if widget changed the mode while app was backgrounded
+            ringManager.syncModeFromWidget()
+        }
     }
 
     // MARK: - Location Setup

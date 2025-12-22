@@ -28,6 +28,7 @@ import Foundation
 import MuseSDK
 import Combine
 import CoreBluetooth
+import WidgetKit
 
 // MARK: - Atomic Helper (Swift 6 safe)
 
@@ -128,6 +129,56 @@ private enum StorageKeys {
     static let savedDeviceName = "muse_ring_name"
     static let lastBatteryLevel = "muse_last_battery"
     static let hasCompletedInitialBind = "muse_ring_bound"  // Track if ring has been bound before
+}
+
+// MARK: - App Group for Widget Communication
+
+enum MuseAppGroup {
+    static let identifier = "group.-ff.com.muse"
+
+    // Keys (must match MuseWidgetAppGroup in widget)
+    static let modeKey = "museGestureMode"
+    static let batteryKey = "museRingBattery"
+    static let isConnectedKey = "museRingConnected"
+    static let isChargingKey = "museRingCharging"
+    static let lastSyncKey = "museLastSync"
+
+    static var sharedDefaults: UserDefaults? {
+        UserDefaults(suiteName: identifier)
+    }
+
+    /// Read current mode from widget
+    static func getMode() -> String {
+        sharedDefaults?.string(forKey: modeKey) ?? "voice"
+    }
+
+    /// Write current mode (for widget to read)
+    static func setMode(_ mode: String) {
+        sharedDefaults?.set(mode, forKey: modeKey)
+        sharedDefaults?.set(Date(), forKey: lastSyncKey)
+    }
+
+    /// Sync all ring status to widget
+    static func syncStatus(battery: Int, isConnected: Bool, isCharging: Bool, mode: String) {
+        sharedDefaults?.set(battery, forKey: batteryKey)
+        sharedDefaults?.set(isConnected, forKey: isConnectedKey)
+        sharedDefaults?.set(isCharging, forKey: isChargingKey)
+        sharedDefaults?.set(mode, forKey: modeKey)
+        sharedDefaults?.set(Date(), forKey: lastSyncKey)
+    }
+
+    /// Update connection status only
+    static func setConnected(_ connected: Bool) {
+        sharedDefaults?.set(connected, forKey: isConnectedKey)
+        sharedDefaults?.set(Date(), forKey: lastSyncKey)
+    }
+
+    /// Update battery and charging status
+    static func setBattery(_ level: Int, isCharging: Bool) {
+        sharedDefaults?.set(level, forKey: batteryKey)
+        sharedDefaults?.set(isCharging, forKey: isChargingKey)
+        sharedDefaults?.set(Date(), forKey: lastSyncKey)
+    }
 }
 
 // MARK: - SDK Timing Constants
@@ -930,6 +981,22 @@ final class RingManager {
         default:
             break // Unknown value - keep current state
         }
+
+        // Sync to widget
+        syncWidgetStatus()
+    }
+
+    /// Sync current status to widget via App Group
+    private func syncWidgetStatus() {
+        let mode = isMusicControlMode ? "music" : "voice"
+        MuseAppGroup.syncStatus(
+            battery: batteryLevel,
+            isConnected: isConnected,
+            isCharging: isCharging,
+            mode: mode
+        )
+        // Trigger widget refresh
+        WidgetCenter.shared.reloadAllTimelines()
     }
 
     // MARK: - HID Mode Configuration
@@ -1211,6 +1278,10 @@ final class RingManager {
         currentDevice = nil
         currentPackets = []
         recordingStartTime = nil
+
+        // Sync disconnected state to widget
+        MuseAppGroup.setConnected(false)
+        WidgetCenter.shared.reloadAllTimelines()
     }
 
     // MARK: - HID Mode Switching (Voice vs Music Control)
@@ -1237,13 +1308,31 @@ final class RingManager {
             if musicMode {
                 let success = await setHIDModeForMusic()
                 isMusicControlMode = success
-                if !success {
+                if success {
+                    // Sync to widget
+                    MuseAppGroup.setMode("music")
+                } else {
                     print("[RingManager] Failed to enable music mode")
                 }
             } else {
                 await configureHIDMode()
                 isMusicControlMode = false
+                // Sync to widget
+                MuseAppGroup.setMode("voice")
             }
+        }
+    }
+
+    /// Check if widget requested a mode change and apply it
+    func syncModeFromWidget() {
+        guard isConnected else { return }
+
+        let widgetMode = MuseAppGroup.getMode()
+        let shouldBeMusicMode = (widgetMode == "music")
+
+        if shouldBeMusicMode != isMusicControlMode {
+            print("[RingManager] Widget requested mode change to: \(widgetMode)")
+            setMusicControlMode(shouldBeMusicMode)
         }
     }
 
@@ -1257,7 +1346,8 @@ final class RingManager {
     private func setHIDModeForMusic() async -> Bool {
         print("[RingManager] Setting music control mode (touch=2, gesture=2)...")
 
-        return await withCheckedContinuation { continuation in
+        // Step 1: Set HID mode for music control
+        let hidSuccess = await withCheckedContinuation { continuation in
             let hasResumed = Atomic(false)
 
             let timeoutTask = Task {
@@ -1290,6 +1380,53 @@ final class RingManager {
                     print("[RingManager] Music mode failed: \(error)")
                     continuation.resume(returning: false)
                 }
+            }
+        }
+
+        guard hidSuccess else { return false }
+
+        // Step 2: Configure all gestures to trigger "next track" (function code 5)
+        // This makes swipe up, swipe down, snap, and pinch all skip to next song
+        try? await Task.sleep(nanoseconds: SDKTiming.interCommandDelay)
+        await configureAllGesturesToNextTrack()
+
+        return true
+    }
+
+    /// Configure all gesture types to trigger next track
+    /// Function codes based on SDK: 5 = next track
+    private func configureAllGesturesToNextTrack() async {
+        print("[RingManager] Configuring all gestures to next track...")
+
+        await withCheckedContinuation { (continuation: CheckedContinuation<Void, Never>) in
+            let hasResumed = Atomic(false)
+
+            let timeoutTask = Task {
+                try? await Task.sleep(nanoseconds: UInt64(SDKTiming.commandTimeout * 1_000_000_000))
+                if hasResumed.setTrueIfFalse() {
+                    print("[RingManager] setGestureFunction timeout")
+                    continuation.resume()
+                }
+            }
+
+            // Set all gestures to function code 5 (next track)
+            // swipeUp=5, swipeDown=5, snap=5, pinch=5
+            BCLRingManager.shared.setGestureFunction(
+                swipeUpGesture: 5,    // Next track
+                swipeDownGesture: 5,  // Next track (was prev track)
+                snapGesture: 5,       // Next track
+                pinchGesture: 5       // Next track
+            ) { result in
+                timeoutTask.cancel()
+                guard hasResumed.setTrueIfFalse() else { return }
+
+                switch result {
+                case .success:
+                    print("[RingManager] Gesture functions configured to all-next-track")
+                case .failure(let error):
+                    print("[RingManager] setGestureFunction failed: \(error)")
+                }
+                continuation.resume()
             }
         }
     }
