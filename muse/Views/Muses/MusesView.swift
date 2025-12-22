@@ -8,6 +8,73 @@
 
 import SwiftUI
 import SwiftData
+import AVFoundation
+
+// MARK: - Audio Player Manager
+
+@MainActor
+@Observable
+final class MuseAudioPlayer {
+    static let shared = MuseAudioPlayer()
+
+    private var audioPlayer: AVAudioPlayer?
+    var playingMuseId: UUID?
+    var isPlaying: Bool { audioPlayer?.isPlaying ?? false }
+
+    private init() {}
+
+    func play(muse: Muse) {
+        // Stop any current playback
+        stop()
+
+        guard let audioData = muse.audioData, !audioData.isEmpty else {
+            print("[MuseAudioPlayer] No audio data for muse")
+            return
+        }
+
+        do {
+            // Configure audio session for playback
+            let session = AVAudioSession.sharedInstance()
+            try session.setCategory(.playback, mode: .default)
+            try session.setActive(true)
+
+            // Create player from WAV data
+            audioPlayer = try AVAudioPlayer(data: audioData)
+            audioPlayer?.play()
+            playingMuseId = muse.id
+
+            print("[MuseAudioPlayer] Playing muse: \(muse.durationString)")
+
+            // Auto-stop when done
+            let duration = audioPlayer?.duration ?? muse.duration
+            DispatchQueue.main.asyncAfter(deadline: .now() + duration + 0.1) { [weak self] in
+                if self?.playingMuseId == muse.id {
+                    self?.stop()
+                }
+            }
+        } catch {
+            print("[MuseAudioPlayer] Playback error: \(error)")
+            playingMuseId = nil
+        }
+    }
+
+    func stop() {
+        audioPlayer?.stop()
+        audioPlayer = nil
+        playingMuseId = nil
+
+        // Deactivate audio session
+        try? AVAudioSession.sharedInstance().setActive(false, options: .notifyOthersOnDeactivation)
+    }
+
+    func togglePlayback(muse: Muse) {
+        if playingMuseId == muse.id {
+            stop()
+        } else {
+            play(muse: muse)
+        }
+    }
+}
 
 // MARK: - Time Period Filter
 
@@ -193,10 +260,15 @@ struct MuseCard: View {
     let onDelete: () -> Void
 
     @State private var showShareSheet = false
+    @State private var audioPlayer = MuseAudioPlayer.shared
+
+    private var isPlaying: Bool {
+        audioPlayer.playingMuseId == muse.id
+    }
 
     var body: some View {
         VStack(alignment: .leading, spacing: Spacing.md) {
-            // Header: timestamp + duration
+            // Header: timestamp + duration/play button
             HStack(alignment: .top) {
                 // Timestamp (typewriter style)
                 VStack(alignment: .leading, spacing: 2) {
@@ -211,28 +283,48 @@ struct MuseCard: View {
 
                 Spacer()
 
-                // Duration badge
-                HStack(spacing: 4) {
-                    Image(systemName: "waveform")
-                        .font(.system(size: 10))
+                // Duration badge with play button (if audio available)
+                Button {
+                    if muse.hasAudio {
+                        audioPlayer.togglePlayback(muse: muse)
+                    }
+                } label: {
+                    HStack(spacing: 4) {
+                        if muse.hasAudio {
+                            Image(systemName: isPlaying ? "stop.fill" : "play.fill")
+                                .font(.system(size: 8))
+                                .foregroundColor(isPlaying ? .museAccent : .museTextTertiary)
+                        } else {
+                            Image(systemName: "waveform")
+                                .font(.system(size: 10))
+                        }
 
-                    Text(muse.durationString)
-                        .font(.museMonoMedium)
+                        Text(muse.durationString)
+                            .font(.museMonoMedium)
+                    }
+                    .foregroundColor(isPlaying ? .museAccent : .museTextTertiary)
+                    .padding(.horizontal, 10)
+                    .padding(.vertical, 6)
+                    .background(isPlaying ? Color.museAccent.opacity(0.1) : Color.museBackgroundSecondary)
+                    .clipShape(Capsule())
+                    .overlay(
+                        Capsule()
+                            .stroke(isPlaying ? Color.museAccent.opacity(0.3) : Color.clear, lineWidth: 1)
+                    )
                 }
-                .foregroundColor(.museTextTertiary)
-                .padding(.horizontal, 10)
-                .padding(.vertical, 6)
-                .background(Color.museBackgroundSecondary)
-                .clipShape(Capsule())
+                .buttonStyle(.plain)
+                .disabled(!muse.hasAudio)
             }
 
-            // Transcribed text (serif)
-            Text(muse.transcription)
-                .font(.museSerif)
-                .foregroundColor(.museText)
-                .lineSpacing(6)
-                .multilineTextAlignment(.leading)
-                .textSelection(.enabled)
+            // Transcribed text (serif) - only show if not empty
+            if !muse.transcription.isEmpty {
+                Text(muse.transcription)
+                    .font(.museSerif)
+                    .foregroundColor(.museText)
+                    .lineSpacing(6)
+                    .multilineTextAlignment(.leading)
+                    .textSelection(.enabled)
+            }
         }
         .padding(Spacing.md)
         .frame(maxWidth: .infinity, alignment: .leading)
@@ -240,9 +332,10 @@ struct MuseCard: View {
         .clipShape(RoundedRectangle(cornerRadius: CornerRadius.lg, style: .continuous))
         .overlay(
             RoundedRectangle(cornerRadius: CornerRadius.lg, style: .continuous)
-                .stroke(Color.museBorder.opacity(0.3), lineWidth: 0.5)
+                .stroke(isPlaying ? Color.museAccent.opacity(0.3) : Color.museBorder.opacity(0.3), lineWidth: isPlaying ? 1 : 0.5)
         )
         .museShadowSmall()
+        .animation(.museSoft, value: isPlaying)
         .contextMenu {
             Button {
                 showShareSheet = true
@@ -250,10 +343,12 @@ struct MuseCard: View {
                 Label("Share", systemImage: "square.and.arrow.up")
             }
 
-            Button {
-                UIPasteboard.general.string = muse.transcription
-            } label: {
-                Label("Copy Text", systemImage: "doc.on.doc")
+            if !muse.transcription.isEmpty {
+                Button {
+                    UIPasteboard.general.string = muse.transcription
+                } label: {
+                    Label("Copy Text", systemImage: "doc.on.doc")
+                }
             }
 
             Divider()

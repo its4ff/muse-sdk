@@ -2,11 +2,11 @@
 //  BLEConnectionManager.swift
 //  muse
 //
-//  Direct CoreBluetooth connection manager for BCL Ring
+//  Direct CoreBluetooth connection manager for Ring
 //  Handles scanning and connection directly, bypassing SDK overhead
-//  Delegates to BCLRingSDK for audio/HID features after connection
+//  Delegates to SDK for audio/HID features after connection
 //
-//  Based on analysis of official BCL Ring app behavior:
+//  Based on analysis of official Ring app behavior:
 //  - Instant reconnect on disconnect (~42ms)
 //  - No delays after connection before sending commands
 //  - Uses write-without-response for speed
@@ -148,7 +148,7 @@ final class BLEConnectionManager: NSObject {
         discoveredRings = []
         state = .scanning
 
-        // Scan for ALL devices (BCL rings don't advertise service UUID, only name)
+        // Scan for ALL devices (rings don't advertise service UUID, only name)
         // We filter by name prefix in didDiscover callback
         centralManager.scanForPeripherals(
             withServices: nil,  // Scan all - filter by name
@@ -311,16 +311,16 @@ final class BLEConnectionManager: NSObject {
     // MARK: - MAC Address Extraction
 
     private func extractMacAddress(from advertisementData: [String: Any]) -> String? {
-        // Try manufacturer data first (BCL includes MAC in advertisement)
+        // Try manufacturer data first (ring includes MAC in advertisement)
         if let manufacturerData = advertisementData[CBAdvertisementDataManufacturerDataKey] as? Data,
            manufacturerData.count >= 8 {
-            // BCL format: company ID (2 bytes) + MAC (6 bytes)
+            // Format: company ID (2 bytes) + MAC (6 bytes)
             let macBytes = manufacturerData.suffix(6)
             let macString = macBytes.map { String(format: "%02X", $0) }.joined(separator: ":")
             return macString
         }
 
-        // Try local name parsing (some BCL rings encode MAC in name like "BCL6031D77")
+        // Try local name parsing (some rings encode MAC in name like "BCL6031D77")
         if let localName = advertisementData[CBAdvertisementDataLocalNameKey] as? String,
            localName.hasPrefix("BCL") {
             let suffix = String(localName.dropFirst(3))
@@ -379,9 +379,9 @@ extension BLEConnectionManager: CBCentralManagerDelegate {
 
         let name = peripheral.name ?? advertisementData[CBAdvertisementDataLocalNameKey] as? String ?? "Unknown"
 
-        // Filter to BCL rings
-        let isBCLRing = BLEConstants.ringNamePrefixes.contains { name.hasPrefix($0) }
-        guard isBCLRing else { return }
+        // Filter to rings by name prefix
+        let isRing = BLEConstants.ringNamePrefixes.contains { name.hasPrefix($0) }
+        guard isRing else { return }
 
         let macAddress = extractMacAddress(from: advertisementData)
 
@@ -476,7 +476,7 @@ extension BLEConnectionManager: CBPeripheralDelegate {
 
         for service in services {
             if service.uuid == BLEConstants.bclServiceUUID {
-                print("[BLE] Found BCL service, discovering characteristics...")
+                print("[BLE] Found ring service, discovering characteristics...")
                 peripheral.discoverCharacteristics(
                     [BLEConstants.writeCharacteristicUUID, BLEConstants.notifyCharacteristicUUID],
                     for: service

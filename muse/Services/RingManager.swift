@@ -6,11 +6,10 @@
 //  Uses MuseSDK
 //
 //  Connection Strategy (v3.2 - Always Configure HID):
-//  - CRITICAL: 3-second delay after BLE connection before sending commands
 //  - CRITICAL: 300ms spacing between consecutive commands
 //  - First connection: appEventBindRing() - clears ring data
 //  - Reconnection: appEventBindRing() - fire and forget, always configure HID
-//  - BCL603 rings have mics - always assume mic=true
+//  - Rings have mics - always assume mic=true
 //
 //  Reconnection Strategy:
 //  - Save MAC address and UUID on successful connection
@@ -57,10 +56,10 @@ private final class Atomic: @unchecked Sendable {
 
 /// Toggle between direct BLE and SDK-based connection
 /// Set to .directBLE for faster, more reliable connections (like official app)
-/// Set to .sdk to use original BCLRingSDK connection flow
+/// Set to .sdk to use original SDK connection flow
 enum RingConnectionMode {
     case directBLE   // Use BLEConnectionManager (recommended)
-    case sdk         // Use BCLRingSDK (fallback)
+    case sdk         // Use SDK (fallback)
 }
 
 // MARK: - Ring Connection State
@@ -127,6 +126,7 @@ private enum StorageKeys {
     static let savedMacAddress = "muse_ring_mac"
     static let savedUUID = "muse_ring_uuid"
     static let savedDeviceName = "muse_ring_name"
+    static let customMuseName = "muse_custom_name"  // User-defined name for their ring
     static let lastBatteryLevel = "muse_last_battery"
     static let hasCompletedInitialBind = "muse_ring_bound"  // Track if ring has been bound before
 }
@@ -182,7 +182,7 @@ enum MuseAppGroup {
 }
 
 // MARK: - SDK Timing Constants
-// From BCL SDK documentation: commandsguide.md
+// From SDK documentation: commandsguide.md
 
 private enum SDKTiming {
     /// Wait 3 seconds after BLE connection before sending any commands
@@ -295,6 +295,17 @@ final class RingManager {
     private var savedDeviceName: String? {
         get { UserDefaults.standard.string(forKey: StorageKeys.savedDeviceName) }
         set { UserDefaults.standard.set(newValue, forKey: StorageKeys.savedDeviceName) }
+    }
+
+    /// User-defined custom name for their ring (public so it can be edited from UI)
+    var customMuseName: String? {
+        get { UserDefaults.standard.string(forKey: StorageKeys.customMuseName) }
+        set { UserDefaults.standard.set(newValue, forKey: StorageKeys.customMuseName) }
+    }
+
+    /// Display name: custom name if set, otherwise device name
+    var displayName: String? {
+        customMuseName ?? deviceName
     }
 
     private var lastKnownBattery: Int {
@@ -475,7 +486,7 @@ final class RingManager {
                 Task { @MainActor in
                     switch result {
                     case .success(let devices):
-                        // Filter to only BCL rings
+                        // Filter to only rings
                         let rings = devices.filter { device in
                             device.localName?.hasPrefix("BCL") == true ||
                             device.localName?.hasPrefix("Ring") == true
@@ -880,7 +891,7 @@ final class RingManager {
         }
 
         // Don't wait for SDK response - just mark connected and configure HID
-        // We know BCL603 rings have microphones
+        // Rings have microphones
         state = .connected
         isMicrophoneSupported = true
         isGestureMusicControlSupported = true
@@ -919,7 +930,7 @@ final class RingManager {
 
     private func handleBindSuccess(_ response: BCLBindRingResponse) {
         // Extract device capabilities
-        // BCL603 rings have microphones - always assume true for this hardware
+        // Rings have microphones - always assume true for this hardware
         isMicrophoneSupported = true
         isGestureMusicControlSupported = true
 

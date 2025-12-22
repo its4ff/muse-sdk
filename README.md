@@ -2,9 +2,9 @@
 
 Capture your thoughts with a tap. Share them beautifully.
 
-muse turns fleeting ideas into shareable moments or memories. Tap, speak, and your words appear transcribed on your feed — ready to share to X, save to your library, or send to friends.
+muse turns fleeting ideas into shareable moments or memories. Tap, speak, and your words appear — with aesthetic templates to share on X/stories/etc, save to your library, or send to friends & family.
 
-> **Note:** This version uses our first ring prototype PCB with known BLE disconnect issues. v1.0 is in development with hardware improvements and design improvements.
+> **Note:** This version uses our first ring prototype PCB with known BLE disconnect issues. v1.0 is in development with significant PCB improvements and mold design improvements.
 
 ---
 
@@ -36,13 +36,15 @@ All transcription happens **on-device** using Whisperkit's small model.
 - Place ring in case
 - **Case must be connected to USB-C to charge** — the case LED may light up without USB, but it won't actually charge
 - If LED on ring is **red** when placed in case, battery is dead — charge for ~1.5 hours or overnight
-- Battery percentage can be inaccurate; charge when behavior seems sluggish or when the green LED is not lit when you try to speak
+- Battery percentage can be inaccurate; charge when you see a red LED signal
+- Battery curve problems may cause inaccurate readings of 100% or 0% at times.
 
 **Connection tips:**
 - Keep ring **within 5-10 feet** of your phone — no offline recordings in this version
 - If connection drops, ring will flash blue several times and keep trying to reconnect
 - Also use the electrical connection in the case for reconnects if you need to
-- BLE disconnects are a known issue in this PCB version
+- Often times the ring may not connect, but it's not actually out of battery. It just had it's reconnect cycle timeout most likely, and needs to be sent a wakeup signal (which can be done with the charging case).
+- BLE disconnects are a known issue in this PCB version, and I apologize for how it might affect this initial experience!! 
 
 ---
 
@@ -58,11 +60,16 @@ The ring supports two modes — **voice** and **music control**. Use one at a ti
 - Swipe up on the capacitive touch/frosted area → skip to next song
 - More gestures (volume, play/pause) coming in future updates
 - Tends to have fewer disconnects than voice mode
+- Right now, it's kind of an art to get this shit right lol. I will demo with you in person, but the accuracy of this gesture isn't optimal yet. And it's more of something for you to just test and let me know what other gestures you would want (we have horizontal in updated PCB f.e.).
 
 **Troubleshooting:**
-- If voice features aren't working, try toggling between music and voice mode — this often fixes it
-- Use the widget to switch between modes
-- Future updates will make mode switching automatic
+- If voice or music control features aren't working, try toggling between music and voice mode. And when you can't switch modes, it means the device needs a connection refresh. In which case putting it on the charging case and trying to refresh/reconnect will often fix it.
+- Future update will make mode switching automatic.
+
+**Audio & Transcription Accuracy:**
+- In this current muse demo app, audio cleanup is very minimal. And doesn't use any AI cleanup or voice isolation. To keep things simple and offline.
+- So transcription works well in quiet environments, but with background noise and music it becomes much less accurate.
+- In non-SDK versions of Muse, it will come with voice isolation and voice recognition flow so your voice is recognized.
 
 ---
 
@@ -121,4 +128,6 @@ Working on v1.0 in Shenzhen with major updates to PCB, mold design, charging cas
 
 Share your thoughts on design, interactions, feature requests, bugs — all of it helps. The more critical the feedback, the better. 
 
-And share something you've built with muse!
+I will most likely request to have a phone call with you to discuss your feedback after a few days, and early access to v1.0.
+
+And text me if you'd like to share something you've built with muse!

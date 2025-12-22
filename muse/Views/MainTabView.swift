@@ -100,22 +100,30 @@ struct MainTabView: View {
 
     /// Transcribe audio session and save as Muse
     private func transcribeAndSave(_ session: AudioSession) async {
-        guard whisperService.state.isReady else {
-            print("[MainTabView] Whisper not ready, cannot transcribe")
-            return
-        }
-
         isTranscribing = true
 
         // Process ADPCM packets through the full pipeline
-        let (processedSamples, sampleRate) = AudioProcessor.processAudioSession(packets: session.packets)
+        // Returns both upsampled audio (for Whisper) and WAV data (for storage)
+        let processedAudio = AudioProcessor.processAudioSession(packets: session.packets)
 
-        print("[MainTabView] Processed \(session.packets.count) packets → \(processedSamples.count) samples @ \(sampleRate)Hz")
+        print("[MainTabView] Processed \(session.packets.count) packets → \(processedAudio.samples.count) samples @ \(processedAudio.sampleRate)Hz")
+
+        // If Whisper isn't ready, save audio-only muse
+        guard whisperService.state.isReady else {
+            print("[MainTabView] Whisper not ready, saving audio-only muse")
+            createMuse(
+                transcription: "",
+                duration: session.duration,
+                audioData: processedAudio.wavData
+            )
+            isTranscribing = false
+            return
+        }
 
         do {
             let result = try await whisperService.transcribeWithProgress(
-                samples: processedSamples,
-                sampleRate: sampleRate
+                samples: processedAudio.samples,
+                sampleRate: processedAudio.sampleRate
             ) { _ in
                 return nil // Continue transcription
             }
@@ -127,7 +135,8 @@ struct MainTabView: View {
             if !finalText.isEmpty {
                 createMuse(
                     transcription: finalText,
-                    duration: session.duration
+                    duration: session.duration,
+                    audioData: processedAudio.wavData
                 )
             }
 
@@ -163,20 +172,22 @@ struct MainTabView: View {
     }
 
     /// Create and save a Muse entry
-    private func createMuse(transcription: String, duration: TimeInterval) {
+    private func createMuse(transcription: String, duration: TimeInterval, audioData: Data? = nil) {
         // Capture location if available
         let location = locationService.getCurrentLocationString()
 
         let muse = Muse(
             transcription: transcription,
             duration: duration,
+            audioData: audioData,
             locationString: location
         )
 
         modelContext.insert(muse)
 
         let locationInfo = location.map { " @ \($0)" } ?? ""
-        print("[MainTabView] Created muse: \"\(transcription.prefix(50))...\" (\(String(format: "%.1f", duration))s)\(locationInfo)")
+        let audioInfo = audioData.map { " [\(String(format: "%.1f", Double($0.count) / 1024))KB audio]" } ?? ""
+        print("[MainTabView] Created muse: \"\(transcription.prefix(50))...\" (\(String(format: "%.1f", duration))s)\(locationInfo)\(audioInfo)")
     }
 }
 

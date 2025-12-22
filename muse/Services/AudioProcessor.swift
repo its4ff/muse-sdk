@@ -13,13 +13,83 @@
 //  5. Normalize to -6dB
 //  6. Upsample 8kHz → 16kHz (for WhisperKit)
 //
+//  Audio Storage:
+//  - Save processed audio (pre-upsample, 8kHz) as WAV for playback
+//  - Smaller file size, still good quality for speech
+//
 
 import Foundation
 import MuseSDK
 
-/// Audio processor for BCL ring microphone recordings
+/// Result from audio processing containing both versions
+struct ProcessedAudio {
+    /// Upsampled samples for Whisper (16kHz)
+    let samples: [Int]
+    /// Sample rate for Whisper (16000)
+    let sampleRate: Int
+    /// WAV data for storage/playback (8kHz, pre-upsample)
+    let wavData: Data?
+}
+
+/// Audio processor for ring microphone recordings
 /// Pipeline: Sort → ADPCM→PCM (SDK) → DC remove → De-clip → Normalize → Upsample
 class AudioProcessor {
+
+    // MARK: - WAV File Creation
+
+    /// Create WAV file data from PCM samples
+    /// - Parameters:
+    ///   - samples: PCM samples as [Int] (will be clamped to Int16 range)
+    ///   - sampleRate: Sample rate in Hz (typically 8000)
+    /// - Returns: WAV file as Data, or nil on failure
+    static func createWAVData(from samples: [Int], sampleRate: Int) -> Data? {
+        guard !samples.isEmpty else { return nil }
+
+        // Convert samples to PCM bytes (Int16 little-endian)
+        var pcmData = Data()
+        pcmData.reserveCapacity(samples.count * 2)
+
+        for sample in samples {
+            let int16Sample = Int16(clamping: sample)
+            withUnsafeBytes(of: int16Sample.littleEndian) { bytes in
+                pcmData.append(contentsOf: bytes)
+            }
+        }
+
+        // WAV header parameters
+        let sampleRateU32 = UInt32(sampleRate)
+        let channels: UInt16 = 1
+        let bitsPerSample: UInt16 = 16
+        let byteRate: UInt32 = sampleRateU32 * UInt32(channels) * UInt32(bitsPerSample / 8)
+        let blockAlign: UInt16 = channels * (bitsPerSample / 8)
+        let dataSize = UInt32(pcmData.count)
+        let fileSize = 36 + dataSize
+
+        // Build WAV header (44 bytes)
+        var header = Data()
+        header.reserveCapacity(44)
+
+        // RIFF header
+        header.append(contentsOf: "RIFF".utf8)
+        withUnsafeBytes(of: fileSize.littleEndian) { header.append(contentsOf: $0) }
+        header.append(contentsOf: "WAVE".utf8)
+
+        // fmt subchunk
+        header.append(contentsOf: "fmt ".utf8)
+        withUnsafeBytes(of: UInt32(16).littleEndian) { header.append(contentsOf: $0) }  // Subchunk1 size
+        withUnsafeBytes(of: UInt16(1).littleEndian) { header.append(contentsOf: $0) }   // PCM format
+        withUnsafeBytes(of: channels.littleEndian) { header.append(contentsOf: $0) }
+        withUnsafeBytes(of: sampleRateU32.littleEndian) { header.append(contentsOf: $0) }
+        withUnsafeBytes(of: byteRate.littleEndian) { header.append(contentsOf: $0) }
+        withUnsafeBytes(of: blockAlign.littleEndian) { header.append(contentsOf: $0) }
+        withUnsafeBytes(of: bitsPerSample.littleEndian) { header.append(contentsOf: $0) }
+
+        // data subchunk
+        header.append(contentsOf: "data".utf8)
+        withUnsafeBytes(of: dataSize.littleEndian) { header.append(contentsOf: $0) }
+
+        return header + pcmData
+    }
 
     // MARK: - ADPCM Decoder (IMA-ADPCM fallback)
 
@@ -65,9 +135,10 @@ class AudioProcessor {
 
     /// Process complete audio session with sorted ADPCM packets
     /// This is the main entry point for processing ring audio
-    static func processAudioSession(packets: [(length: Int, seq: Int, audioData: [Int])]) -> (samples: [Int], sampleRate: Int) {
+    /// Returns ProcessedAudio with both upsampled (for Whisper) and WAV (for storage) versions
+    static func processAudioSession(packets: [(length: Int, seq: Int, audioData: [Int])]) -> ProcessedAudio {
         guard !packets.isEmpty else {
-            return ([], 16000)
+            return ProcessedAudio(samples: [], sampleRate: 16000, wavData: nil)
         }
 
         print("[AudioProcessor] Processing \(packets.count) ADPCM packets...")
@@ -99,12 +170,31 @@ class AudioProcessor {
         // Step 5: Normalize to -6dB
         processedPCMSamples = normalize(processedPCMSamples, targetDb: -6.0)
 
+        // === SAVE PRE-UPSAMPLE AUDIO AS WAV (8kHz) ===
+        // This is the "good" audio - processed but not upsampled
+        // Smaller file size, still good quality for speech playback
+        let wavData = createWAVData(from: processedPCMSamples, sampleRate: 8000)
+        if let wav = wavData {
+            print("[AudioProcessor] Created WAV: \(wav.count) bytes (\(String(format: "%.1f", Double(wav.count) / 1024))KB)")
+        }
+
         // Step 6: Upsample 8kHz → 16kHz (for Whisper)
         let originalCount = processedPCMSamples.count
-        processedPCMSamples = upsample(processedPCMSamples, from: 8000, to: 16000)
-        print("[AudioProcessor] Upsampled: \(originalCount) → \(processedPCMSamples.count) samples (8kHz → 16kHz)")
+        let upsampledSamples = upsample(processedPCMSamples, from: 8000, to: 16000)
+        print("[AudioProcessor] Upsampled: \(originalCount) → \(upsampledSamples.count) samples (8kHz → 16kHz)")
 
-        return (processedPCMSamples, 16000)
+        return ProcessedAudio(
+            samples: upsampledSamples,
+            sampleRate: 16000,
+            wavData: wavData
+        )
+    }
+
+    /// Legacy method - returns tuple for backward compatibility
+    /// Prefer processAudioSession which returns ProcessedAudio with WAV data
+    static func processAudioSessionLegacy(packets: [(length: Int, seq: Int, audioData: [Int])]) -> (samples: [Int], sampleRate: Int) {
+        let result = processAudioSession(packets: packets)
+        return (result.samples, result.sampleRate)
     }
 
     // MARK: - DC Offset Removal

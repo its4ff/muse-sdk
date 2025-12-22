@@ -16,6 +16,8 @@ struct HomeView: View {
     @State private var ringManager = RingManager.shared
     @State private var whisperService = WhisperService.shared
     @State private var showOnboarding = false
+    @State private var showEditName = false
+    @State private var editingName = ""
 
     // Recording UI state (mirrors RingManager.isRecording)
     @State private var recordingDuration: TimeInterval = 0
@@ -61,6 +63,19 @@ struct HomeView: View {
             }
             .sheet(isPresented: $showOnboarding) {
                 OnboardingView()
+            }
+            .sheet(isPresented: $showEditName) {
+                EditMuseNameSheet(
+                    name: $editingName,
+                    onSave: {
+                        ringManager.customMuseName = editingName.isEmpty ? nil : editingName
+                        showEditName = false
+                    },
+                    onCancel: {
+                        showEditName = false
+                    }
+                )
+                .presentationDetents([.height(200)])
             }
             .onAppear {
                 setupAudioPacketListener()
@@ -118,16 +133,32 @@ struct HomeView: View {
 
                 Spacer()
 
-                // Firmware version if connected
-                if ringManager.isConnected, let firmware = ringManager.firmwareVersion {
-                    VStack(alignment: .trailing, spacing: Spacing.xxs) {
-                        Text("v\(firmware)")
-                            .font(.museMono)
-                            .foregroundColor(.museTextSecondary)
-                        Text("firmware")
-                            .font(.museMicro)
+                // Editable muse name (when connected)
+                if ringManager.isConnected {
+                    Button {
+                        editingName = ringManager.customMuseName ?? ""
+                        showEditName = true
+                    } label: {
+                        VStack(alignment: .trailing, spacing: Spacing.xxs) {
+                            if let customName = ringManager.customMuseName, !customName.isEmpty {
+                                Text(customName.lowercased())
+                                    .font(.museSerif)
+                                    .foregroundColor(.museText)
+                            } else {
+                                Text("name your muse")
+                                    .font(.museCaption)
+                                    .foregroundColor(.museTextTertiary)
+                            }
+                            HStack(spacing: 3) {
+                                Image(systemName: "pencil")
+                                    .font(.system(size: 9))
+                                Text("edit")
+                                    .font(.museMicro)
+                            }
                             .foregroundColor(.museTextTertiary)
+                        }
                     }
+                    .buttonStyle(.plain)
                 }
             }
 
@@ -615,6 +646,60 @@ struct BatteryBar: View {
         if level >= 60 { return .museText }
         if level >= 30 { return .orange }
         return .red
+    }
+}
+
+// MARK: - Edit Muse Name Sheet
+
+struct EditMuseNameSheet: View {
+    @Binding var name: String
+    let onSave: () -> Void
+    let onCancel: () -> Void
+    @FocusState private var isFocused: Bool
+
+    var body: some View {
+        VStack(spacing: Spacing.lg) {
+            // Header
+            HStack {
+                Button("Cancel") { onCancel() }
+                    .font(.museCaption)
+                    .foregroundColor(.museTextSecondary)
+
+                Spacer()
+
+                Text("name your muse")
+                    .font(.museCaptionMedium)
+                    .foregroundColor(.museText)
+
+                Spacer()
+
+                Button("Save") { onSave() }
+                    .font(.museCaptionMedium)
+                    .foregroundColor(.museAccent)
+            }
+            .padding(.top, Spacing.md)
+
+            // Text field
+            TextField("my muse", text: $name)
+                .font(.museTitle3)
+                .foregroundColor(.museText)
+                .multilineTextAlignment(.center)
+                .padding(Spacing.md)
+                .background(Color.museBackgroundSecondary)
+                .clipShape(RoundedRectangle(cornerRadius: CornerRadius.md))
+                .focused($isFocused)
+
+            Text("give your ring a personal name")
+                .font(.museMicro)
+                .foregroundColor(.museTextTertiary)
+
+            Spacer()
+        }
+        .padding(.horizontal, Spacing.lg)
+        .background(Color.museBackground)
+        .onAppear {
+            isFocused = true
+        }
     }
 }
 
