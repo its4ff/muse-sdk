@@ -27,7 +27,6 @@ import Foundation
 import MuseSDK
 import Combine
 import CoreBluetooth
-import WidgetKit
 
 // MARK: - Atomic Helper (Swift 6 safe)
 
@@ -131,56 +130,6 @@ private enum StorageKeys {
     static let customMuseName = "muse_custom_name"  // User-defined name for their ring
     static let lastBatteryLevel = "muse_last_battery"
     static let hasCompletedInitialBind = "muse_ring_bound"  // Track if ring has been bound before
-}
-
-// MARK: - App Group for Widget Communication
-
-enum MuseAppGroup {
-    static let identifier = "group.-ff.com.muse"
-
-    // Keys (must match MuseWidgetAppGroup in widget)
-    static let modeKey = "museGestureMode"
-    static let batteryKey = "museRingBattery"
-    static let isConnectedKey = "museRingConnected"
-    static let isChargingKey = "museRingCharging"
-    static let lastSyncKey = "museLastSync"
-
-    static var sharedDefaults: UserDefaults? {
-        UserDefaults(suiteName: identifier)
-    }
-
-    /// Read current mode from widget
-    static func getMode() -> String {
-        sharedDefaults?.string(forKey: modeKey) ?? "voice"
-    }
-
-    /// Write current mode (for widget to read)
-    static func setMode(_ mode: String) {
-        sharedDefaults?.set(mode, forKey: modeKey)
-        sharedDefaults?.set(Date(), forKey: lastSyncKey)
-    }
-
-    /// Sync all ring status to widget
-    static func syncStatus(battery: Int, isConnected: Bool, isCharging: Bool, mode: String) {
-        sharedDefaults?.set(battery, forKey: batteryKey)
-        sharedDefaults?.set(isConnected, forKey: isConnectedKey)
-        sharedDefaults?.set(isCharging, forKey: isChargingKey)
-        sharedDefaults?.set(mode, forKey: modeKey)
-        sharedDefaults?.set(Date(), forKey: lastSyncKey)
-    }
-
-    /// Update connection status only
-    static func setConnected(_ connected: Bool) {
-        sharedDefaults?.set(connected, forKey: isConnectedKey)
-        sharedDefaults?.set(Date(), forKey: lastSyncKey)
-    }
-
-    /// Update battery and charging status
-    static func setBattery(_ level: Int, isCharging: Bool) {
-        sharedDefaults?.set(level, forKey: batteryKey)
-        sharedDefaults?.set(isCharging, forKey: isChargingKey)
-        sharedDefaults?.set(Date(), forKey: lastSyncKey)
-    }
 }
 
 // MARK: - SDK Timing Constants
@@ -1009,21 +958,6 @@ final class RingManager {
             break // Unknown value - keep current state
         }
 
-        // Sync to widget
-        syncWidgetStatus()
-    }
-
-    /// Sync current status to widget via App Group
-    private func syncWidgetStatus() {
-        let mode = isMusicControlMode ? "music" : "voice"
-        MuseAppGroup.syncStatus(
-            battery: batteryLevel,
-            isConnected: isConnected,
-            isCharging: isCharging,
-            mode: mode
-        )
-        // Trigger widget refresh
-        WidgetCenter.shared.reloadAllTimelines()
     }
 
     // MARK: - HID Mode Configuration
@@ -1307,10 +1241,6 @@ final class RingManager {
         currentDevice = nil
         currentPackets = []
         recordingStartTime = nil
-
-        // Sync disconnected state to widget
-        MuseAppGroup.setConnected(false)
-        WidgetCenter.shared.reloadAllTimelines()
     }
 
     // MARK: - HID Mode Switching (Voice vs Music Control)
@@ -1338,32 +1268,14 @@ final class RingManager {
                 let success = await setHIDModeForMusic()
                 isMusicControlMode = success
                 isSnapPhotoEnabled = false  // Music mode uses gesture mode, disable snap photo
-                if success {
-                    // Sync to widget
-                    MuseAppGroup.setMode("music")
-                } else {
+                if !success {
                     print("[RingManager] Failed to enable music mode")
                 }
             } else {
                 await configureHIDMode()
                 isMusicControlMode = false
                 isSnapPhotoEnabled = false  // Voice mode disables gesture mode
-                // Sync to widget
-                MuseAppGroup.setMode("voice")
             }
-        }
-    }
-
-    /// Check if widget requested a mode change and apply it
-    func syncModeFromWidget() {
-        guard state == .connected else { return }
-
-        let widgetMode = MuseAppGroup.getMode()
-        let shouldBeMusicMode = (widgetMode == "music")
-
-        if shouldBeMusicMode != isMusicControlMode {
-            print("[RingManager] Widget requested mode change to: \(widgetMode)")
-            setMusicControlMode(shouldBeMusicMode)
         }
     }
 

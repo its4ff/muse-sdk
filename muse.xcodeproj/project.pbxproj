@@ -10,9 +10,6 @@
 		1D9497F12EF7EA7600C21762 /* MuseSDK in Frameworks */ = {isa = PBXBuildFile; productRef = 1D9497F02EF7EA7600C21762 /* MuseSDK */; };
 		1D9497F42EF7EAD200C21762 /* WhisperKit in Frameworks */ = {isa = PBXBuildFile; productRef = 1D9497F32EF7EAD200C21762 /* WhisperKit */; };
 		1D9497F62EF7EAD200C21762 /* whisperkit-cli in Frameworks */ = {isa = PBXBuildFile; productRef = 1D9497F52EF7EAD200C21762 /* whisperkit-cli */; };
-		1DBCB5A02EF8DE600064A980 /* WidgetKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 1DBCB57E2EF8DE370064A980 /* WidgetKit.framework */; };
-		1DBCB5A12EF8DE600064A980 /* SwiftUI.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 1DBCB5802EF8DE370064A980 /* SwiftUI.framework */; };
-		1DBCB5B02EF8DE600064A980 /* museWidgetExtension.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = 1DBCB59F2EF8DE600064A980 /* museWidgetExtension.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -30,13 +27,6 @@
 			remoteGlobalIDString = 1D94977B2EF7E5B800C21762;
 			remoteInfo = muse;
 		};
-		1DBCB5AE2EF8DE600064A980 /* PBXContainerItemProxy */ = {
-			isa = PBXContainerItemProxy;
-			containerPortal = 1D9497742EF7E5B800C21762 /* Project object */;
-			proxyType = 1;
-			remoteGlobalIDString = 1DBCB59E2EF8DE600064A980;
-			remoteInfo = museWidgetExtension;
-		};
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXCopyFilesBuildPhase section */
@@ -46,7 +36,6 @@
 			dstPath = "";
 			dstSubfolderSpec = 13;
 			files = (
-				1DBCB5B02EF8DE600064A980 /* museWidgetExtension.appex in Embed Foundation Extensions */,
 			);
 			name = "Embed Foundation Extensions";
 			runOnlyForDeploymentPostprocessing = 0;
@@ -59,8 +48,6 @@
 		1D9497952EF7E5BA00C21762 /* museUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = museUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		1DBCB57E2EF8DE370064A980 /* WidgetKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = WidgetKit.framework; path = System/Library/Frameworks/WidgetKit.framework; sourceTree = SDKROOT; };
 		1DBCB5802EF8DE370064A980 /* SwiftUI.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = SwiftUI.framework; path = System/Library/Frameworks/SwiftUI.framework; sourceTree = SDKROOT; };
-		1DBCB59F2EF8DE600064A980 /* museWidgetExtension.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = museWidgetExtension.appex; sourceTree = BUILT_PRODUCTS_DIR; };
-		1DBCB5BA2EF8DEB90064A980 /* museWidgetExtension.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = museWidgetExtension.entitlements; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
@@ -70,13 +57,6 @@
 				Info.plist,
 			);
 			target = 1D94977B2EF7E5B800C21762 /* muse */;
-		};
-		1DBCB5B42EF8DE600064A980 /* Exceptions for "museWidget" folder in "museWidgetExtension" target */ = {
-			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
-			membershipExceptions = (
-				Info.plist,
-			);
-			target = 1DBCB59E2EF8DE600064A980 /* museWidgetExtension */;
 		};
 /* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
 
@@ -97,14 +77,6 @@
 		1D9497982EF7E5BA00C21762 /* museUITests */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
 			path = museUITests;
-			sourceTree = "<group>";
-		};
-		1DBCB5A22EF8DE600064A980 /* museWidget */ = {
-			isa = PBXFileSystemSynchronizedRootGroup;
-			exceptions = (
-				1DBCB5B42EF8DE600064A980 /* Exceptions for "museWidget" folder in "museWidgetExtension" target */,
-			);
-			path = museWidget;
 			sourceTree = "<group>";
 		};
 /* End PBXFileSystemSynchronizedRootGroup section */
@@ -134,26 +106,15 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
-		1DBCB59C2EF8DE600064A980 /* Frameworks */ = {
-			isa = PBXFrameworksBuildPhase;
-			buildActionMask = 2147483647;
-			files = (
-				1DBCB5A12EF8DE600064A980 /* SwiftUI.framework in Frameworks */,
-				1DBCB5A02EF8DE600064A980 /* WidgetKit.framework in Frameworks */,
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-		};
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
 		1D9497732EF7E5B800C21762 = {
 			isa = PBXGroup;
 			children = (
-				1DBCB5BA2EF8DEB90064A980 /* museWidgetExtension.entitlements */,
 				1D94977E2EF7E5B800C21762 /* muse */,
 				1D94978E2EF7E5BA00C21762 /* museTests */,
 				1D9497982EF7E5BA00C21762 /* museUITests */,
-				1DBCB5A22EF8DE600064A980 /* museWidget */,
 				1DBCB57D2EF8DE370064A980 /* Frameworks */,
 				1D94977D2EF7E5B800C21762 /* Products */,
 			);
@@ -165,7 +126,6 @@
 				1D94977C2EF7E5B800C21762 /* muse.app */,
 				1D94978B2EF7E5B900C21762 /* museTests.xctest */,
 				1D9497952EF7E5BA00C21762 /* museUITests.xctest */,
-				1DBCB59F2EF8DE600064A980 /* museWidgetExtension.appex */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -194,7 +154,6 @@
 			buildRules = (
 			);
 			dependencies = (
-				1DBCB5AF2EF8DE600064A980 /* PBXTargetDependency */,
 			);
 			fileSystemSynchronizedGroups = (
 				1D94977E2EF7E5B800C21762 /* muse */,
@@ -255,28 +214,6 @@
 			productReference = 1D9497952EF7E5BA00C21762 /* museUITests.xctest */;
 			productType = "com.apple.product-type.bundle.ui-testing";
 		};
-		1DBCB59E2EF8DE600064A980 /* museWidgetExtension */ = {
-			isa = PBXNativeTarget;
-			buildConfigurationList = 1DBCB5B12EF8DE600064A980 /* Build configuration list for PBXNativeTarget "museWidgetExtension" */;
-			buildPhases = (
-				1DBCB59B2EF8DE600064A980 /* Sources */,
-				1DBCB59C2EF8DE600064A980 /* Frameworks */,
-				1DBCB59D2EF8DE600064A980 /* Resources */,
-			);
-			buildRules = (
-			);
-			dependencies = (
-			);
-			fileSystemSynchronizedGroups = (
-				1DBCB5A22EF8DE600064A980 /* museWidget */,
-			);
-			name = museWidgetExtension;
-			packageProductDependencies = (
-			);
-			productName = museWidgetExtension;
-			productReference = 1DBCB59F2EF8DE600064A980 /* museWidgetExtension.appex */;
-			productType = "com.apple.product-type.app-extension";
-		};
 /* End PBXNativeTarget section */
 
 /* Begin PBXProject section */
@@ -297,9 +234,6 @@
 					1D9497942EF7E5BA00C21762 = {
 						CreatedOnToolsVersion = 26.2;
 						TestTargetID = 1D94977B2EF7E5B800C21762;
-					};
-					1DBCB59E2EF8DE600064A980 = {
-						CreatedOnToolsVersion = 26.2;
 					};
 				};
 			};
@@ -324,7 +258,6 @@
 				1D94977B2EF7E5B800C21762 /* muse */,
 				1D94978A2EF7E5B900C21762 /* museTests */,
 				1D9497942EF7E5BA00C21762 /* museUITests */,
-				1DBCB59E2EF8DE600064A980 /* museWidgetExtension */,
 			);
 		};
 /* End PBXProject section */
@@ -345,13 +278,6 @@
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 		1D9497932EF7E5BA00C21762 /* Resources */ = {
-			isa = PBXResourcesBuildPhase;
-			buildActionMask = 2147483647;
-			files = (
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-		};
-		1DBCB59D2EF8DE600064A980 /* Resources */ = {
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
@@ -382,13 +308,6 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
-		1DBCB59B2EF8DE600064A980 /* Sources */ = {
-			isa = PBXSourcesBuildPhase;
-			buildActionMask = 2147483647;
-			files = (
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-		};
 /* End PBXSourcesBuildPhase section */
 
 /* Begin PBXTargetDependency section */
@@ -401,11 +320,6 @@
 			isa = PBXTargetDependency;
 			target = 1D94977B2EF7E5B800C21762 /* muse */;
 			targetProxy = 1D9497962EF7E5BA00C21762 /* PBXContainerItemProxy */;
-		};
-		1DBCB5AF2EF8DE600064A980 /* PBXTargetDependency */ = {
-			isa = PBXTargetDependency;
-			target = 1DBCB59E2EF8DE600064A980 /* museWidgetExtension */;
-			targetProxy = 1DBCB5AE2EF8DE600064A980 /* PBXContainerItemProxy */;
 		};
 /* End PBXTargetDependency section */
 
@@ -697,68 +611,6 @@
 			};
 			name = Release;
 		};
-		1DBCB5B22EF8DE600064A980 /* Debug */ = {
-			isa = XCBuildConfiguration;
-			buildSettings = {
-				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
-				ASSETCATALOG_COMPILER_WIDGET_BACKGROUND_COLOR_NAME = WidgetBackground;
-				CODE_SIGN_ENTITLEMENTS = museWidgetExtension.entitlements;
-				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 1;
-				DEVELOPMENT_TEAM = BY98A58282;
-				GENERATE_INFOPLIST_FILE = YES;
-				INFOPLIST_FILE = museWidget/Info.plist;
-				INFOPLIST_KEY_CFBundleDisplayName = museWidget;
-				INFOPLIST_KEY_NSHumanReadableCopyright = "";
-				LD_RUNPATH_SEARCH_PATHS = (
-					"$(inherited)",
-					"@executable_path/Frameworks",
-					"@executable_path/../../Frameworks",
-				);
-				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = "-ff.com.muse.museWidget";
-				PRODUCT_NAME = "$(TARGET_NAME)";
-				SKIP_INSTALL = YES;
-				STRING_CATALOG_GENERATE_SYMBOLS = YES;
-				SWIFT_APPROACHABLE_CONCURRENCY = YES;
-				SWIFT_EMIT_LOC_STRINGS = YES;
-				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
-				SWIFT_VERSION = 5.0;
-				TARGETED_DEVICE_FAMILY = "1,2";
-			};
-			name = Debug;
-		};
-		1DBCB5B32EF8DE600064A980 /* Release */ = {
-			isa = XCBuildConfiguration;
-			buildSettings = {
-				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
-				ASSETCATALOG_COMPILER_WIDGET_BACKGROUND_COLOR_NAME = WidgetBackground;
-				CODE_SIGN_ENTITLEMENTS = museWidgetExtension.entitlements;
-				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 1;
-				DEVELOPMENT_TEAM = BY98A58282;
-				GENERATE_INFOPLIST_FILE = YES;
-				INFOPLIST_FILE = museWidget/Info.plist;
-				INFOPLIST_KEY_CFBundleDisplayName = museWidget;
-				INFOPLIST_KEY_NSHumanReadableCopyright = "";
-				LD_RUNPATH_SEARCH_PATHS = (
-					"$(inherited)",
-					"@executable_path/Frameworks",
-					"@executable_path/../../Frameworks",
-				);
-				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = "-ff.com.muse.museWidget";
-				PRODUCT_NAME = "$(TARGET_NAME)";
-				SKIP_INSTALL = YES;
-				STRING_CATALOG_GENERATE_SYMBOLS = YES;
-				SWIFT_APPROACHABLE_CONCURRENCY = YES;
-				SWIFT_EMIT_LOC_STRINGS = YES;
-				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
-				SWIFT_VERSION = 5.0;
-				TARGETED_DEVICE_FAMILY = "1,2";
-			};
-			name = Release;
-		};
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
@@ -794,15 +646,6 @@
 			buildConfigurations = (
 				1D9497A62EF7E5BA00C21762 /* Debug */,
 				1D9497A72EF7E5BA00C21762 /* Release */,
-			);
-			defaultConfigurationIsVisible = 0;
-			defaultConfigurationName = Release;
-		};
-		1DBCB5B12EF8DE600064A980 /* Build configuration list for PBXNativeTarget "museWidgetExtension" */ = {
-			isa = XCConfigurationList;
-			buildConfigurations = (
-				1DBCB5B22EF8DE600064A980 /* Debug */,
-				1DBCB5B32EF8DE600064A980 /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
