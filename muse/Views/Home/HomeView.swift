@@ -42,6 +42,11 @@ struct HomeView: View {
                     // Ring Mode Card (Audio vs Music)
                     if ringManager.isConnected {
                         ringModeCard
+
+                        // Snap Photo Toggle (only in voice mode)
+                        if !ringManager.isMusicControlMode {
+                            snapPhotoCard
+                        }
                     }
 
                     // Recording indicator (when active)
@@ -492,6 +497,43 @@ struct HomeView: View {
         .museShadowSmall()
     }
 
+    // MARK: - Snap Photo Card
+
+    private var snapPhotoCard: some View {
+        HStack {
+            // Icon and label
+            HStack(spacing: Spacing.sm) {
+                Image(systemName: "camera.fill")
+                    .font(.system(size: 14))
+                    .foregroundColor(ringManager.isSnapPhotoEnabled ? .museAccent : .museTextTertiary)
+
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("snap to snap")
+                        .font(.museCaptionMedium)
+                        .foregroundColor(.museText)
+
+                    Text("finger snap triggers camera")
+                        .font(.museMicro)
+                        .foregroundColor(.museTextTertiary)
+                }
+            }
+
+            Spacer()
+
+            // Toggle
+            Toggle("", isOn: Binding(
+                get: { ringManager.isSnapPhotoEnabled },
+                set: { ringManager.setSnapPhotoEnabled($0) }
+            ))
+            .labelsHidden()
+            .tint(.museAccent)
+        }
+        .padding(Spacing.md)
+        .background(Color.museCard)
+        .clipShape(RoundedRectangle(cornerRadius: CornerRadius.lg))
+        .museShadowSmall()
+    }
+
     // MARK: - Recording Card (shown during recording)
 
     private var recordingCard: some View {
@@ -553,7 +595,7 @@ struct HomeView: View {
         switch ringManager.state {
         case .connected:
             return .museConnected
-        case .connecting, .scanning, .binding, .reconnecting:
+        case .connecting, .scanning, .binding, .reconnecting, .configuring:
             return .museConnecting
         case .disconnected:
             return .museTextMuted

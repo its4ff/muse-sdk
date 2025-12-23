@@ -131,14 +131,15 @@ struct MainTabView: View {
             let finalText = cleanTranscriptionText(result.text)
             print("[MainTabView] Transcription complete: \"\(finalText.prefix(100))\"")
 
-            // Create Muse if we got text
-            if !finalText.isEmpty {
-                createMuse(
-                    transcription: finalText,
-                    duration: session.duration,
-                    audioData: processedAudio.wavData
-                )
+            // Create Muse - if text is empty (bracket-only content filtered), save as audio-only
+            if finalText.isEmpty {
+                print("[MainTabView] Bracket-only content detected, saving as audio-only muse")
             }
+            createMuse(
+                transcription: finalText,
+                duration: session.duration,
+                audioData: processedAudio.wavData
+            )
 
         } catch {
             print("[MainTabView] Transcription failed: \(error)")
@@ -168,7 +169,31 @@ struct MainTabView: View {
             cleaned = cleaned.replacingOccurrences(of: "  ", with: " ")
         }
 
+        // Check if result is only bracket/paren content (1-3 short words)
+        // Matches: [MUSIC], (upbeat music), [INAUDIBLE], (laughter), etc.
+        if isBracketOnlyContent(cleaned) {
+            return ""
+        }
+
         return cleaned
+    }
+
+    /// Check if text is only bracket/parentheses content (non-speech artifacts)
+    /// Examples: [MUSIC], (upbeat music), [INAUDIBLE], (laughter), [applause]
+    private func isBracketOnlyContent(_ text: String) -> Bool {
+        let trimmed = text.trimmingCharacters(in: .whitespaces)
+        guard !trimmed.isEmpty else { return false }
+
+        // Pattern: optional whitespace, then one or more bracketed/parens sections
+        // Each section is [text] or (text) with 1-4 words inside
+        let bracketPattern = #"^[\s]*(\[[^\]]{1,40}\]|\([^\)]{1,40}\))[\s]*$"#
+
+        if let regex = try? NSRegularExpression(pattern: bracketPattern, options: .caseInsensitive) {
+            let range = NSRange(trimmed.startIndex..., in: trimmed)
+            return regex.firstMatch(in: trimmed, range: range) != nil
+        }
+
+        return false
     }
 
     /// Create and save a Muse entry

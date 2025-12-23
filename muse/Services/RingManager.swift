@@ -70,6 +70,7 @@ enum RingConnectionState: Equatable {
     case connecting
     case reconnecting
     case binding
+    case configuring  // HID setup in progress - block UI commands
     case connected
 
     var description: String {
@@ -79,13 +80,14 @@ enum RingConnectionState: Equatable {
         case .connecting: return "Connecting..."
         case .reconnecting: return "Reconnecting..."
         case .binding: return "Setting up..."
+        case .configuring: return "Configuring..."
         case .connected: return "Connected"
         }
     }
 
     var isActive: Bool {
         switch self {
-        case .scanning, .connecting, .reconnecting, .binding:
+        case .scanning, .connecting, .reconnecting, .binding, .configuring:
             return true
         default:
             return false
@@ -233,6 +235,9 @@ final class RingManager {
 
     // HID Mode (voice vs music control)
     var isMusicControlMode = false
+
+    // Snap photo gesture mode (finger snap triggers camera shutter)
+    var isSnapPhotoEnabled = false
 
     // Ring capabilities (from bind response)
     var isGestureMusicControlSupported = false
@@ -866,6 +871,12 @@ final class RingManager {
     /// Stage 1 fix: Avoid data sync errors that can destabilize the ring
     /// Always configures HID mode after, regardless of SDK response quality
     private func performReconnectBind() async {
+        // Set configuring state - blocks UI commands until HID setup complete
+        state = .configuring
+        isMicrophoneSupported = true
+        isGestureMusicControlSupported = true
+        reconnectAttempts = 0
+
         // Fire off the bind command (don't wait for perfect response)
         BCLRingManager.shared.appEventBindRing(
             date: Date(),
@@ -890,18 +901,16 @@ final class RingManager {
             }
         }
 
-        // Don't wait for SDK response - just mark connected and configure HID
-        // Rings have microphones
-        state = .connected
-        isMicrophoneSupported = true
-        isGestureMusicControlSupported = true
-        reconnectAttempts = 0
-
         print("[RingManager] Reconnect: configuring HID mode...")
 
         // Wait for bind command to process, then configure HID
         try? await Task.sleep(nanoseconds: SDKTiming.interCommandDelay * 2)
         await configureHIDMode()
+
+        // Only mark connected AFTER HID setup completes
+        // This prevents UI from sending commands during setup
+        state = .connected
+        print("[RingManager] Reconnect complete - now accepting commands")
     }
 
     /// Handle successful connect response (similar to bind but different response type)
@@ -944,18 +953,25 @@ final class RingManager {
         updateBatteryState(rawBattery: rawBattery)
 
         let fwDisplay = firmwareVersion ?? "unknown"
-        print("[RingManager] Connected (FW: \(fwDisplay), battery: \(batteryLevel)%\(isCharging ? " charging" : ""))")
+        print("[RingManager] Bind success (FW: \(fwDisplay), battery: \(batteryLevel)%\(isCharging ? " charging" : ""))")
 
-        state = .connected
         reconnectAttempts = 0
 
         // Configure audio mode with proper timing
         // Only configure if not charging (audio doesn't work while charging)
         if isMicrophoneSupported && !isCharging {
+            // Stay in configuring state until HID setup completes
+            state = .configuring
             Task {
                 try? await Task.sleep(nanoseconds: SDKTiming.interCommandDelay)
                 await configureHIDMode()
+                state = .connected
+                print("[RingManager] First bind complete - now accepting commands")
             }
+        } else {
+            // If charging, go directly to connected (no HID setup needed)
+            state = .connected
+            print("[RingManager] Connected (charging - skipping HID setup)")
         }
     }
 
@@ -1019,7 +1035,9 @@ final class RingManager {
     private func configureHIDMode(retryCount: Int = 0) async {
         let maxRetries = 2
 
-        guard isMicrophoneSupported, !isCharging, state == .connected else { return }
+        // Allow during configuring (initial setup) or connected (mode switch)
+        guard isMicrophoneSupported, !isCharging,
+              state == .connected || state == .configuring else { return }
 
         // Step 1: Set audio format to ADPCM with retry
         let formatResult = await setAudioFormat()
@@ -1228,7 +1246,7 @@ final class RingManager {
 
     /// Refresh battery level and device info using appEventRefreshRing
     func refresh() async {
-        guard isConnected else { return }
+        guard state == .connected else { return }
 
         let wasCharging = isCharging
 
@@ -1305,8 +1323,8 @@ final class RingManager {
     /// - gestureMode=2: Swipe in air = next/prev track
     /// Ring must be HID-paired at iOS system level (Settings > Bluetooth shows ring)
     func setMusicControlMode(_ musicMode: Bool) {
-        guard isConnected else {
-            print("[RingManager] Cannot set mode - not connected")
+        guard state == .connected else {
+            print("[RingManager] Cannot set mode - state is \(state) (must be connected)")
             return
         }
 
@@ -1319,6 +1337,7 @@ final class RingManager {
             if musicMode {
                 let success = await setHIDModeForMusic()
                 isMusicControlMode = success
+                isSnapPhotoEnabled = false  // Music mode uses gesture mode, disable snap photo
                 if success {
                     // Sync to widget
                     MuseAppGroup.setMode("music")
@@ -1328,6 +1347,7 @@ final class RingManager {
             } else {
                 await configureHIDMode()
                 isMusicControlMode = false
+                isSnapPhotoEnabled = false  // Voice mode disables gesture mode
                 // Sync to widget
                 MuseAppGroup.setMode("voice")
             }
@@ -1336,7 +1356,7 @@ final class RingManager {
 
     /// Check if widget requested a mode change and apply it
     func syncModeFromWidget() {
-        guard isConnected else { return }
+        guard state == .connected else { return }
 
         let widgetMode = MuseAppGroup.getMode()
         let shouldBeMusicMode = (widgetMode == "music")
@@ -1350,15 +1370,13 @@ final class RingManager {
     /// Set HID mode for music control
     /// From SDK docs:
     /// - touchMode=2: Music control via touch (tap = play/pause)
-    /// - gestureMode=2: Music control via air swipe (swipe = next/prev track)
     ///
     /// Ring sends HID Consumer Control keys directly to iOS - no app callback needed.
     /// Ring must be HID-paired at iOS system level (Settings > Bluetooth shows ring).
     private func setHIDModeForMusic() async -> Bool {
-        print("[RingManager] Setting music control mode (touch=2, gesture=2)...")
+        print("[RingManager] Setting music control mode (touch=2, gesture=off)...")
 
-        // Step 1: Set HID mode for music control
-        let hidSuccess = await withCheckedContinuation { continuation in
+        return await withCheckedContinuation { continuation in
             let hasResumed = Atomic(false)
 
             let timeoutTask = Task {
@@ -1369,12 +1387,12 @@ final class RingManager {
                 }
             }
 
-            // Enable BOTH touch and gesture for music control
+            // Touch only for music control (no air gestures)
             // touchMode=2: Tap ring surface = play/pause
-            // gestureMode=2: Swipe in air = next/prev track
+            // gestureMode=255: Off (not using air gestures for music)
             BCLRingManager.shared.setHIDMode(
                 touchMode: 2,      // Music control via touch
-                gestureMode: 2,    // Music control via gesture
+                gestureMode: 255,  // Off
                 systemType: 1,     // iOS
                 deviceModelName: BCLRingManager.shared.getMobileDeviceModelName(),
                 screenHeightPixel: BCLRingManager.shared.getMobileDeviceScreenHeightPixel(),
@@ -1393,51 +1411,78 @@ final class RingManager {
                 }
             }
         }
-
-        guard hidSuccess else { return false }
-
-        // Step 2: Configure all gestures to trigger "next track" (function code 5)
-        // This makes swipe up, swipe down, snap, and pinch all skip to next song
-        try? await Task.sleep(nanoseconds: SDKTiming.interCommandDelay)
-        await configureAllGesturesToNextTrack()
-
-        return true
     }
 
-    /// Configure all gesture types to trigger next track
-    /// Function codes based on SDK: 5 = next track
-    private func configureAllGesturesToNextTrack() async {
-        print("[RingManager] Configuring all gestures to next track...")
+    // MARK: - Snap Photo Gesture Mode
 
-        await withCheckedContinuation { (continuation: CheckedContinuation<Void, Never>) in
+    /// Toggle snap-to-photo gesture mode
+    /// When enabled: Finger snap gesture triggers camera shutter (HID volume up key)
+    /// Works with iOS Camera app and most camera apps
+    func setSnapPhotoEnabled(_ enabled: Bool) {
+        guard state == .connected else {
+            print("[RingManager] Cannot set snap photo - state is \(state) (must be connected)")
+            return
+        }
+
+        // Can't use snap photo while in music mode (conflicts with gesture mode)
+        if enabled && isMusicControlMode {
+            print("[RingManager] Disable music mode first before enabling snap photo")
+            return
+        }
+
+        print("[RingManager] Setting snap photo: \(enabled)")
+
+        Task {
+            try? await Task.sleep(nanoseconds: SDKTiming.interCommandDelay)
+
+            if enabled {
+                let success = await setHIDModeForSnapPhoto()
+                isSnapPhotoEnabled = success
+            } else {
+                // Return to voice mode (disables gesture mode)
+                await configureHIDMode()
+                isSnapPhotoEnabled = false
+            }
+        }
+    }
+
+    /// Set HID mode for snap-to-photo gesture
+    /// gestureMode=4 is Snap (photo) mode - finger snap triggers camera shutter
+    private func setHIDModeForSnapPhoto() async -> Bool {
+        print("[RingManager] Setting snap photo mode (touch=4, gesture=4)...")
+
+        return await withCheckedContinuation { continuation in
             let hasResumed = Atomic(false)
 
             let timeoutTask = Task {
                 try? await Task.sleep(nanoseconds: UInt64(SDKTiming.commandTimeout * 1_000_000_000))
                 if hasResumed.setTrueIfFalse() {
-                    print("[RingManager] setGestureFunction timeout")
-                    continuation.resume()
+                    print("[RingManager] setHIDMode timeout for snap photo")
+                    continuation.resume(returning: false)
                 }
             }
 
-            // Set all gestures to function code 5 (next track)
-            // swipeUp=5, swipeDown=5, snap=5, pinch=5
-            BCLRingManager.shared.setGestureFunction(
-                swipeUpGesture: 5,    // Next track
-                swipeDownGesture: 5,  // Next track (was prev track)
-                snapGesture: 5,       // Next track
-                pinchGesture: 5       // Next track
+            // touchMode=4: Audio upload (preserve voice recording)
+            // gestureMode=4: Snap (photo) mode - finger snap triggers camera shutter
+            BCLRingManager.shared.setHIDMode(
+                touchMode: 4,      // Audio upload (voice recording still works)
+                gestureMode: 4,    // Snap (photo) mode
+                systemType: 1,     // iOS
+                deviceModelName: BCLRingManager.shared.getMobileDeviceModelName(),
+                screenHeightPixel: BCLRingManager.shared.getMobileDeviceScreenHeightPixel(),
+                screenWidthPixel: BCLRingManager.shared.getMobileDeviceScreenWidthPixel()
             ) { result in
                 timeoutTask.cancel()
                 guard hasResumed.setTrueIfFalse() else { return }
 
                 switch result {
-                case .success:
-                    print("[RingManager] Gesture functions configured to all-next-track")
+                case .success(let response):
+                    print("[RingManager] Snap photo mode set (status: \(response.status))")
+                    continuation.resume(returning: response.status == 0 || response.status == 1)
                 case .failure(let error):
-                    print("[RingManager] setGestureFunction failed: \(error)")
+                    print("[RingManager] Snap photo mode failed: \(error)")
+                    continuation.resume(returning: false)
                 }
-                continuation.resume()
             }
         }
     }
