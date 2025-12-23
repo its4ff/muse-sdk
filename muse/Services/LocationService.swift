@@ -18,6 +18,10 @@ final class LocationService: NSObject {
     private(set) var currentCity: String?
     private(set) var currentCountry: String?
 
+    // Current coordinates (for map display)
+    private(set) var currentLatitude: Double?
+    private(set) var currentLongitude: Double?
+
     // Permission state
     private(set) var authorizationStatus: CLAuthorizationStatus = .notDetermined
     var isAuthorized: Bool {
@@ -58,6 +62,14 @@ final class LocationService: NSObject {
         return currentLocationString
     }
 
+    /// Get current coordinates for a muse (returns nil if no permission/location)
+    func getCurrentCoordinates() -> (latitude: Double, longitude: Double)? {
+        guard let lat = currentLatitude, let lon = currentLongitude else {
+            return nil
+        }
+        return (lat, lon)
+    }
+
     /// Force refresh location and geocode
     func refreshLocation() {
         guard isAuthorized else { return }
@@ -78,6 +90,10 @@ extension LocationService: CLLocationManagerDelegate {
 
     func locationManager(_ manager: CLLocationManager, didUpdateLocations locations: [CLLocation]) {
         guard let location = locations.last else { return }
+
+        // Always update coordinates (for map accuracy)
+        currentLatitude = location.coordinate.latitude
+        currentLongitude = location.coordinate.longitude
 
         // Only geocode if location changed significantly (1km)
         if let last = lastLocation, location.distance(from: last) < 1000 {

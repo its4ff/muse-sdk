@@ -59,6 +59,9 @@ struct HomeView: View {
             .background(Color.museBackground)
             .scrollIndicators(.hidden)
             .navigationBarTitleDisplayMode(.inline)
+            .toolbarBackground(.visible, for: .navigationBar)
+            .toolbarBackground(Color.museBackground, for: .navigationBar)
+            .toolbarColorScheme(.light, for: .navigationBar)
             .toolbar {
                 ToolbarItem(placement: .principal) {
                     Text("muse")

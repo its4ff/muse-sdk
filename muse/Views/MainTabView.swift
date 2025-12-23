@@ -28,6 +28,7 @@ struct MainTabView: View {
     enum Tab {
         case home
         case muses
+        case map
     }
 
     var body: some View {
@@ -43,8 +44,17 @@ struct MainTabView: View {
                     Label("muses", systemImage: "square.stack")
                 }
                 .tag(Tab.muses)
+
+            MapView()
+                .tabItem {
+                    Label("map", systemImage: "map")
+                }
+                .tag(Tab.map)
         }
         .tint(.museAccent)
+        .toolbarBackground(.visible, for: .tabBar)
+        .toolbarBackground(Color.museBackground, for: .tabBar)
+        .toolbarColorScheme(.light, for: .tabBar)
         .onAppear {
             setupAppLevelAudioListener()
             setupLocationService()
@@ -196,19 +206,23 @@ struct MainTabView: View {
     private func createMuse(transcription: String, duration: TimeInterval, audioData: Data? = nil) {
         // Capture location if available
         let location = locationService.getCurrentLocationString()
+        let coordinates = locationService.getCurrentCoordinates()
 
         let muse = Muse(
             transcription: transcription,
             duration: duration,
             audioData: audioData,
-            locationString: location
+            locationString: location,
+            latitude: coordinates?.latitude,
+            longitude: coordinates?.longitude
         )
 
         modelContext.insert(muse)
 
         let locationInfo = location.map { " @ \($0)" } ?? ""
+        let coordInfo = coordinates.map { " (\(String(format: "%.4f", $0.latitude)), \(String(format: "%.4f", $0.longitude)))" } ?? ""
         let audioInfo = audioData.map { " [\(String(format: "%.1f", Double($0.count) / 1024))KB audio]" } ?? ""
-        print("[MainTabView] Created muse: \"\(transcription.prefix(50))...\" (\(String(format: "%.1f", duration))s)\(locationInfo)\(audioInfo)")
+        print("[MainTabView] Created muse: \"\(transcription.prefix(50))...\" (\(String(format: "%.1f", duration))s)\(locationInfo)\(coordInfo)\(audioInfo)")
     }
 }
 

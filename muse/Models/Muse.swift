@@ -7,6 +7,7 @@
 
 import Foundation
 import SwiftData
+import CoreLocation
 
 @Model
 final class Muse {
@@ -16,12 +17,16 @@ final class Muse {
     var duration: TimeInterval  // Recording duration in seconds
     var audioData: Data?        // Optional raw PCM audio (for playback if needed)
     var locationString: String? // Optional location (e.g. "shenzhen, china")
+    var latitude: Double?       // GPS latitude for map display
+    var longitude: Double?      // GPS longitude for map display
 
     init(
         transcription: String,
         duration: TimeInterval,
         audioData: Data? = nil,
-        locationString: String? = nil
+        locationString: String? = nil,
+        latitude: Double? = nil,
+        longitude: Double? = nil
     ) {
         self.id = UUID()
         self.createdAt = Date()
@@ -29,6 +34,8 @@ final class Muse {
         self.duration = duration
         self.audioData = audioData
         self.locationString = locationString
+        self.latitude = latitude
+        self.longitude = longitude
     }
 
     // MARK: - Computed Properties
@@ -63,6 +70,15 @@ final class Muse {
     var hasAudio: Bool {
         guard let data = audioData else { return false }
         return !data.isEmpty
+    }
+
+    var hasLocation: Bool {
+        latitude != nil && longitude != nil
+    }
+
+    var coordinate: CLLocationCoordinate2D? {
+        guard let lat = latitude, let lon = longitude else { return nil }
+        return CLLocationCoordinate2D(latitude: lat, longitude: lon)
     }
 
     var preview: String {

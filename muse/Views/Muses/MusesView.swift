@@ -112,7 +112,9 @@ struct MusesView: View {
                 }
             }
             .navigationBarTitleDisplayMode(.inline)
+            .toolbarBackground(.visible, for: .navigationBar)
             .toolbarBackground(Color.museBackground, for: .navigationBar)
+            .toolbarColorScheme(.light, for: .navigationBar)
             .toolbar {
                 ToolbarItem(placement: .principal) {
                     Text("muses")
@@ -260,6 +262,8 @@ struct MuseCard: View {
     let onDelete: () -> Void
 
     @State private var showShareSheet = false
+    @State private var showAudioShareSheet = false
+    @State private var audioFileURL: URL?
     @State private var audioPlayer = MuseAudioPlayer.shared
 
     private var isPlaying: Bool {
@@ -267,23 +271,26 @@ struct MuseCard: View {
     }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: Spacing.md) {
-            // Header: timestamp + duration/play button
-            HStack(alignment: .top) {
-                // Timestamp (typewriter style)
-                VStack(alignment: .leading, spacing: 2) {
-                    Text(muse.timeString)
-                        .font(.museMono)
-                        .foregroundColor(.museTextTertiary)
+        VStack(alignment: .leading, spacing: 12) {
+            // Header: location/date + play button
+            HStack {
+                VStack(alignment: .leading, spacing: 4) {
+                    // Location (if available)
+                    if let location = muse.locationString {
+                        Text(location)
+                            .font(.museCaptionMedium)
+                            .foregroundColor(.museTextSecondary)
+                    }
 
-                    Text(muse.dateString)
-                        .font(.museMono)
-                        .foregroundColor(.museTextMuted)
+                    // Full date
+                    Text(muse.fullDateString)
+                        .font(.museCaption)
+                        .foregroundColor(.museTextTertiary)
                 }
 
                 Spacer()
 
-                // Duration badge with play button (if audio available)
+                // Play button with duration
                 Button {
                     if muse.hasAudio {
                         audioPlayer.togglePlayback(muse: muse)
@@ -316,14 +323,21 @@ struct MuseCard: View {
                 .disabled(!muse.hasAudio)
             }
 
-            // Transcribed text (serif) - only show if not empty
-            if !muse.transcription.isEmpty {
-                Text(muse.transcription)
-                    .font(.museSerif)
-                    .foregroundColor(.museText)
-                    .lineSpacing(6)
-                    .multilineTextAlignment(.leading)
-                    .textSelection(.enabled)
+            // Transcribed text (serif)
+            Text(muse.transcription.isEmpty ? "(audio only)" : muse.transcription)
+                .font(.museSerif)
+                .foregroundColor(muse.transcription.isEmpty ? .museTextTertiary : .museText)
+                .lineSpacing(6)
+                .multilineTextAlignment(.leading)
+                .textSelection(.enabled)
+
+            // Footer: time (right aligned)
+            HStack {
+                Spacer()
+
+                Text(muse.timeString)
+                    .font(.museMono)
+                    .foregroundColor(.museTextTertiary)
             }
         }
         .padding(Spacing.md)
@@ -341,6 +355,14 @@ struct MuseCard: View {
                 showShareSheet = true
             } label: {
                 Label("Share", systemImage: "square.and.arrow.up")
+            }
+
+            if muse.hasAudio {
+                Button {
+                    shareAudio()
+                } label: {
+                    Label("Share Audio", systemImage: "waveform")
+                }
             }
 
             if !muse.transcription.isEmpty {
@@ -362,7 +384,52 @@ struct MuseCard: View {
         .sheet(isPresented: $showShareSheet) {
             ShareMuseScreen(muse: muse)
         }
+        .sheet(isPresented: $showAudioShareSheet) {
+            if let url = audioFileURL {
+                AudioShareSheet(url: url)
+            }
+        }
     }
+
+    private func shareAudio() {
+        guard let audioData = muse.audioData, !audioData.isEmpty else { return }
+
+        // Create temp file with timestamp-based name
+        let formatter = DateFormatter()
+        formatter.dateFormat = "MM-dd-yy_hmma"
+        let filename = "muse_\(formatter.string(from: muse.createdAt).lowercased()).wav"
+
+        let tempURL = FileManager.default.temporaryDirectory.appendingPathComponent(filename)
+
+        do {
+            try audioData.write(to: tempURL)
+            audioFileURL = tempURL
+            showAudioShareSheet = true
+        } catch {
+            print("[MuseCard] Failed to write audio file: \(error)")
+        }
+    }
+}
+
+// MARK: - Audio Share Sheet
+
+struct AudioShareSheet: UIViewControllerRepresentable {
+    let url: URL
+
+    func makeUIViewController(context: Context) -> UIActivityViewController {
+        let controller = UIActivityViewController(activityItems: [url], applicationActivities: nil)
+
+        // Make it appear as a smaller sheet on iPhone
+        controller.modalPresentationStyle = .pageSheet
+        if let sheet = controller.sheetPresentationController {
+            sheet.detents = [.medium(), .large()]
+            sheet.prefersGrabberVisible = true
+        }
+
+        return controller
+    }
+
+    func updateUIViewController(_ uiViewController: UIActivityViewController, context: Context) {}
 }
 
 #Preview {

@@ -225,7 +225,7 @@ struct ShareMuseScreen: View {
     }
 
     private var stylePicker: some View {
-        HStack(spacing: 10) {
+        HStack(spacing: 16) {
             ForEach(ShareMuseStyle.allCases, id: \.rawValue) { style in
                 Button {
                     withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
@@ -233,45 +233,87 @@ struct ShareMuseScreen: View {
                     }
                 } label: {
                     VStack(spacing: 6) {
-                        // Style preview circle
-                        ZStack {
-                            if style == .dark {
-                                // Dark style preview - dark bg with light quote
+                        // Style preview circle with padding to prevent border clipping
+                        stylePreviewCircle(for: style)
+                            .overlay(
                                 Circle()
-                                    .fill(Color(hex: "0F0E0D"))
-                                    .frame(width: 40, height: 40)
-                                    .overlay(
-                                        Text("\u{201C}")
-                                            .font(.system(size: 18, weight: .light, design: .serif))
-                                            .foregroundColor(Color(hex: "FAF8F5"))
+                                    .stroke(
+                                        selectedStyle == style ? Color.museAccent : Color.museBorder,
+                                        lineWidth: selectedStyle == style ? 2 : 1
                                     )
-                            } else {
-                                // Light style preview - light bg with dark quote
-                                Circle()
-                                    .fill(Color(hex: "FAF8F5"))
-                                    .frame(width: 40, height: 40)
-                                    .overlay(
-                                        Text("\u{201C}")
-                                            .font(.system(size: 18, weight: .light, design: .serif))
-                                            .foregroundColor(Color(hex: "1A1816"))
-                                    )
-                            }
-                        }
-                        .overlay(
-                            Circle()
-                                .stroke(
-                                    selectedStyle == style ? Color.museAccent : Color.museBorder,
-                                    lineWidth: selectedStyle == style ? 2 : 1
-                                )
-                        )
+                            )
+                            .padding(2) // Prevent border clipping
 
                         Text(style.displayName)
-                            .font(.system(size: 12, weight: selectedStyle == style ? .medium : .regular))
+                            .font(.system(size: 11, weight: selectedStyle == style ? .medium : .regular))
                             .foregroundColor(selectedStyle == style ? .museText : .museTextTertiary)
                     }
                 }
                 .buttonStyle(.plain)
             }
+        }
+        .frame(maxWidth: .infinity) // Center the HStack
+        .padding(.vertical, 2) // Extra vertical padding for border visibility
+    }
+
+    @ViewBuilder
+    private func stylePreviewCircle(for style: ShareMuseStyle) -> some View {
+        switch style {
+        case .dark:
+            Circle()
+                .fill(Color(hex: "0F0E0D"))
+                .frame(width: 40, height: 40)
+                .overlay(
+                    Text("\u{201C}")
+                        .font(.system(size: 16, weight: .light, design: .serif))
+                        .foregroundColor(Color(hex: "FAF8F5"))
+                )
+        case .minimal:
+            Circle()
+                .fill(Color(hex: "FAF8F5"))
+                .frame(width: 40, height: 40)
+                .overlay(
+                    Text("\u{201C}")
+                        .font(.system(size: 16, weight: .light, design: .serif))
+                        .foregroundColor(Color(hex: "1A1816"))
+                )
+        case .terminal:
+            Circle()
+                .fill(Color(hex: "0A0A0A"))
+                .frame(width: 40, height: 40)
+                .overlay(
+                    Text(">_")
+                        .font(.system(size: 14, weight: .medium, design: .monospaced))
+                        .foregroundColor(Color(hex: "4AF626"))
+                )
+        case .brutalist:
+            Circle()
+                .fill(Color.white)
+                .frame(width: 40, height: 40)
+                .overlay(
+                    Text("A")
+                        .font(.system(size: 18, weight: .black, design: .default))
+                        .foregroundColor(Color(hex: "0A0A0A"))
+                )
+        case .cosmic:
+            Circle()
+                .fill(
+                    LinearGradient(
+                        colors: [Color(hex: "0D1321"), Color(hex: "1D2D44")],
+                        startPoint: .top,
+                        endPoint: .bottom
+                    )
+                )
+                .frame(width: 40, height: 40)
+                .overlay(
+                    // Tiny stars
+                    ZStack {
+                        Circle().fill(Color.white.opacity(0.6)).frame(width: 2, height: 2).offset(x: -8, y: -6)
+                        Circle().fill(Color.white.opacity(0.4)).frame(width: 1.5, height: 1.5).offset(x: 6, y: -4)
+                        Circle().fill(Color.white.opacity(0.5)).frame(width: 2, height: 2).offset(x: 3, y: 8)
+                        Circle().fill(Color.white.opacity(0.3)).frame(width: 1, height: 1).offset(x: -5, y: 5)
+                    }
+                )
         }
     }
 
