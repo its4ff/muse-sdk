@@ -512,7 +512,7 @@ struct HomeView: View {
                         .font(.museCaptionMedium)
                         .foregroundColor(.museText)
 
-                    Text("finger snap triggers camera")
+                    Text("finger snap triggers photo in camera app")
                         .font(.museMicro)
                         .foregroundColor(.museTextTertiary)
                 }
