@@ -1,4 +1,5 @@
-# muse v0.5
+# muse v0.5 
+> technically less of an SDK, and more just a pure example app built for muse.
 
 Capture your thoughts with a tap. Share them beautifully.
 
@@ -62,9 +63,13 @@ The ring supports two modes — **voice** and **music control**. Use one at a ti
 - Tends to have fewer disconnects than voice mode
 - Right now, it's kind of an art to get this shit right lol. I will demo with you in person, but the accuracy of this gesture isn't optimal yet. And it's more of something for you to just test and let me know what other gestures you would want (we have horizontal in updated PCB f.e.).
 
+---
+
 **Troubleshooting:**
 - If voice or music control features aren't working, try toggling between music and voice mode. And when you can't switch modes, it means the device needs a connection refresh. In which case putting it on the charging case and trying to refresh/reconnect will often fix it.
 - Future update will make mode switching automatic.
+
+---
 
 **Audio & Transcription Accuracy:**
 - In this current muse demo app, audio cleanup is very minimal. And doesn't use any AI cleanup or voice isolation. To keep things simple and offline.
@@ -112,11 +117,13 @@ The ring supports two modes — **voice** and **music control**. Use one at a ti
 
 The core of muse is simple: **ring audio capture + on-device transcription**.
 
-Use this as a foundation for your own workflows — journaling apps, agents, fun companions, idea capture systems, an LLM that controls your life via your muse ring as input, or anything else you dream up.
+Use this as a foundation for your own workflows — journaling apps, agents, fun companions like a tamagotchi, idea capture systems, an LLM that controls your life via your muse ring as input, or anything else you dream up.
+
+We're building several core apps & workflows on muse that will come with the version 1 release. If you need any ideas, ask Naveed. We have a 'request for builders' document of about 15 different unique apps that are perfect for muse.
 
 **Want access to more gestures?**
 
-The ring hardware supports additional touch gestures and IMU-based air gestures that aren't exposed in this version. If you'd like to build on top of these capabilities, text Naveed something you've already built with muse and he'll share access.
+The ring hardware supports additional touch gestures, haptic vibrations, and IMU-based air gestures that aren't exposed in this version. If you'd like to build on top of these capabilities, text Naveed something you've already built with muse and he'll share access.
 
 ---
 
