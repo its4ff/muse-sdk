@@ -2,8 +2,8 @@
 //  MapView.swift
 //  muse
 //
-//  Interactive map showing muses as pins
-//  Minimal aesthetic with swipeable carousel for nearby muses
+//  Interactive map showing muses as pins with clustering
+//  Clusters muses within 75m radius, shows count badge
 //
 
 import SwiftUI
@@ -11,70 +11,87 @@ import SwiftData
 import MapKit
 import CoreLocation
 
+// MARK: - Cluster Model
+
+struct MuseCluster: Identifiable {
+    let id = UUID()
+    let muses: [Muse]
+    let coordinate: CLLocationCoordinate2D
+    let minClusterSize: Int
+
+    var count: Int { muses.count }
+    var isCluster: Bool { muses.count >= minClusterSize }
+
+    // Most recent muse (for single pins)
+    var primaryMuse: Muse? { muses.first }
+}
+
 struct MapView: View {
     @Environment(\.modelContext) private var modelContext
     @Query(sort: \Muse.createdAt, order: .reverse) private var allMuses: [Muse]
 
     // Map state
     @State private var position: MapCameraPosition = .automatic
-    @State private var selectedMuse: Muse?
+    @State private var selectedCluster: MuseCluster?
     @State private var showDetail = false
 
     // Carousel state
     @State private var currentCarouselIndex: Int = 0
 
-    // Proximity radius in meters (500m)
-    private let proximityRadius: CLLocationDistance = 500
+    // Clustering settings
+    private let clusterRadius: CLLocationDistance = 50  // meters
+    private let minClusterSize: Int = 10  // minimum muses to form a cluster
 
     // Filter to only muses with location
     private var musesWithLocation: [Muse] {
         allMuses.filter { $0.hasLocation }
     }
 
-    // Get nearby muses sorted by most recent
-    private var nearbyMuses: [Muse] {
-        guard let selected = selectedMuse,
-              let selectedCoord = selected.coordinate else {
-            return []
-        }
+    // Compute clusters from muses
+    private var clusters: [MuseCluster] {
+        computeClusters(from: musesWithLocation, radius: clusterRadius)
+    }
 
-        let selectedLocation = CLLocation(latitude: selectedCoord.latitude, longitude: selectedCoord.longitude)
-
-        return musesWithLocation
-            .filter { muse in
-                guard let coord = muse.coordinate else { return false }
-                let museLocation = CLLocation(latitude: coord.latitude, longitude: coord.longitude)
-                return museLocation.distance(from: selectedLocation) <= proximityRadius
-            }
-            .sorted { $0.createdAt > $1.createdAt } // Most recent first
+    // Get muses in selected cluster (sorted by most recent)
+    private var clusterMuses: [Muse] {
+        guard let cluster = selectedCluster else { return [] }
+        return cluster.muses.sorted { $0.createdAt > $1.createdAt }
     }
 
     var body: some View {
         ZStack {
-            // Map
-            Map(position: $position, selection: $selectedMuse) {
-                ForEach(musesWithLocation, id: \.id) { muse in
-                    if let coordinate = muse.coordinate {
-                        Annotation(muse.preview.prefix(20).description, coordinate: coordinate) {
-                            MuseMapPin(
-                                muse: muse,
-                                isSelected: selectedMuse?.id == muse.id,
-                                isInCarousel: nearbyMuses.contains { $0.id == muse.id } && showDetail
+            // Map with clusters
+            Map(position: $position) {
+                ForEach(clusters) { cluster in
+                    Annotation("", coordinate: cluster.coordinate) {
+                        if cluster.isCluster {
+                            // Cluster pin with count
+                            ClusterMapPin(
+                                count: cluster.count,
+                                isSelected: selectedCluster?.id == cluster.id
                             )
                             .onTapGesture {
                                 withAnimation(.spring(response: 0.3, dampingFraction: 0.8)) {
-                                    selectedMuse = muse
+                                    selectedCluster = cluster
                                     showDetail = true
-                                    // Find index of tapped muse in nearby array
-                                    if let index = nearbyMuses.firstIndex(where: { $0.id == muse.id }) {
-                                        currentCarouselIndex = index
-                                    } else {
-                                        currentCarouselIndex = 0
-                                    }
+                                    currentCarouselIndex = 0
+                                }
+                            }
+                        } else if let muse = cluster.primaryMuse {
+                            // Single muse pin
+                            MuseMapPin(
+                                muse: muse,
+                                isSelected: selectedCluster?.id == cluster.id,
+                                isInCarousel: false
+                            )
+                            .onTapGesture {
+                                withAnimation(.spring(response: 0.3, dampingFraction: 0.8)) {
+                                    selectedCluster = cluster
+                                    showDetail = true
+                                    currentCarouselIndex = 0
                                 }
                             }
                         }
-                        .tag(muse)
                     }
                 }
             }
@@ -83,6 +100,16 @@ struct MapView: View {
                 MapCompass()
                 MapUserLocationButton()
             }
+            .tint(.white) // Make map controls (location button) white
+            .onTapGesture {
+                // Dismiss detail when tapping map background
+                if showDetail {
+                    withAnimation(.spring(response: 0.3, dampingFraction: 0.8)) {
+                        showDetail = false
+                        selectedCluster = nil
+                    }
+                }
+            }
 
             // Empty state
             if musesWithLocation.isEmpty {
@@ -90,7 +117,7 @@ struct MapView: View {
             }
 
             // Carousel overlay
-            if showDetail && !nearbyMuses.isEmpty {
+            if showDetail && !clusterMuses.isEmpty {
                 VStack {
                     Spacer()
                     carouselView
@@ -99,24 +126,68 @@ struct MapView: View {
                 }
             }
         }
-        .onChange(of: selectedMuse) { _, newValue in
-            if newValue != nil {
-                showDetail = true
-                // Reset to first index when new muse selected
-                if let index = nearbyMuses.firstIndex(where: { $0.id == newValue?.id }) {
-                    currentCarouselIndex = index
-                } else {
-                    currentCarouselIndex = 0
+        .onChange(of: currentCarouselIndex) { _, newIndex in
+            // Update map position when swiping carousel
+            if newIndex < clusterMuses.count {
+                let muse = clusterMuses[newIndex]
+                if let coord = muse.coordinate {
+                    withAnimation(.easeInOut(duration: 0.3)) {
+                        position = .camera(MapCamera(centerCoordinate: coord, distance: 1000))
+                    }
                 }
             }
         }
-        .onChange(of: currentCarouselIndex) { _, newIndex in
-            // Update selected muse and animate map to it
-            if newIndex < nearbyMuses.count {
-                let newMuse = nearbyMuses[newIndex]
-                selectedMuse = newMuse
+    }
+
+    // MARK: - Clustering Algorithm
+
+    private func computeClusters(from muses: [Muse], radius: CLLocationDistance) -> [MuseCluster] {
+        var remainingMuses = muses
+        var clusters: [MuseCluster] = []
+
+        while !remainingMuses.isEmpty {
+            guard let firstMuse = remainingMuses.first,
+                  let firstCoord = firstMuse.coordinate else {
+                remainingMuses.removeFirst()
+                continue
             }
+
+            let firstLocation = CLLocation(latitude: firstCoord.latitude, longitude: firstCoord.longitude)
+
+            // Find all muses within radius of this one
+            var clusterMuses: [Muse] = []
+            var indicesToRemove: [Int] = []
+
+            for (index, muse) in remainingMuses.enumerated() {
+                guard let coord = muse.coordinate else { continue }
+                let location = CLLocation(latitude: coord.latitude, longitude: coord.longitude)
+
+                if location.distance(from: firstLocation) <= radius {
+                    clusterMuses.append(muse)
+                    indicesToRemove.append(index)
+                }
+            }
+
+            // Remove clustered muses from remaining
+            for index in indicesToRemove.reversed() {
+                remainingMuses.remove(at: index)
+            }
+
+            // Calculate cluster center (average of all coordinates)
+            let centerLat = clusterMuses.compactMap { $0.latitude }.reduce(0, +) / Double(clusterMuses.count)
+            let centerLon = clusterMuses.compactMap { $0.longitude }.reduce(0, +) / Double(clusterMuses.count)
+
+            // Sort muses by date (most recent first)
+            let sortedMuses = clusterMuses.sorted { $0.createdAt > $1.createdAt }
+
+            clusters.append(MuseCluster(
+                muses: sortedMuses,
+                coordinate: CLLocationCoordinate2D(latitude: centerLat, longitude: centerLon),
+                minClusterSize: minClusterSize
+            ))
         }
+
+        return clusters
     }
 
     // MARK: - Carousel View
@@ -125,11 +196,11 @@ struct MapView: View {
         VStack(spacing: 12) {
             // Swipeable cards
             TabView(selection: $currentCarouselIndex) {
-                ForEach(Array(nearbyMuses.enumerated()), id: \.element.id) { index, muse in
+                ForEach(Array(clusterMuses.enumerated()), id: \.element.id) { index, muse in
                     MapMuseDetailCard(muse: muse) {
                         withAnimation(.spring(response: 0.3, dampingFraction: 0.8)) {
                             showDetail = false
-                            selectedMuse = nil
+                            selectedCluster = nil
                         }
                     }
                     .padding(.horizontal, 20)
@@ -139,17 +210,16 @@ struct MapView: View {
             .tabViewStyle(.page(indexDisplayMode: .never))
             .frame(height: 160)
 
-            // Page indicator (only show if more than 1 nearby)
-            if nearbyMuses.count > 1 {
-                HStack(spacing: 6) {
-                    ForEach(0..<nearbyMuses.count, id: \.self) { index in
-                        Circle()
-                            .fill(index == currentCarouselIndex ? Color.museAccent : Color.museTextMuted)
-                            .frame(width: 6, height: 6)
-                            .animation(.spring(response: 0.3, dampingFraction: 0.7), value: currentCarouselIndex)
-                    }
-                }
-                .padding(.bottom, 4)
+            // Counter indicator (cleaner than dots for many items)
+            if clusterMuses.count > 1 {
+                Text("\(currentCarouselIndex + 1) of \(clusterMuses.count)")
+                    .font(.museMono)
+                    .foregroundColor(.museTextTertiary)
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 6)
+                    .background(Color.museCard.opacity(0.9))
+                    .clipShape(Capsule())
+                    .padding(.bottom, 4)
             }
         }
     }
@@ -174,6 +244,36 @@ struct MapView: View {
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .background(Color.museBackground.opacity(0.9))
+    }
+}
+
+// MARK: - Cluster Pin
+
+struct ClusterMapPin: View {
+    let count: Int
+    let isSelected: Bool
+
+    var body: some View {
+        ZStack {
+            // Outer ring (selected state)
+            if isSelected {
+                Circle()
+                    .stroke(Color.museAccent, lineWidth: 2)
+                    .frame(width: 44, height: 44)
+            }
+
+            // Main cluster circle
+            Circle()
+                .fill(Color.museText)
+                .frame(width: isSelected ? 36 : 32, height: isSelected ? 36 : 32)
+                .shadow(color: Color.black.opacity(0.2), radius: 6, y: 3)
+
+            // Count label
+            Text("\(count)")
+                .font(.system(size: 14, weight: .semibold, design: .rounded))
+                .foregroundColor(.museCard)
+        }
+        .animation(.spring(response: 0.3, dampingFraction: 0.7), value: isSelected)
     }
 }
 

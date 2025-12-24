@@ -129,6 +129,7 @@ private enum StorageKeys {
     static let savedDeviceName = "muse_ring_name"
     static let customMuseName = "muse_custom_name"  // User-defined name for their ring
     static let lastBatteryLevel = "muse_last_battery"
+    static let lastBatteryTimestamp = "muse_last_battery_time"  // When battery was last updated
     static let hasCompletedInitialBind = "muse_ring_bound"  // Track if ring has been bound before
 }
 
@@ -265,6 +266,21 @@ final class RingManager {
     private var lastKnownBattery: Int {
         get { UserDefaults.standard.integer(forKey: StorageKeys.lastBatteryLevel) }
         set { UserDefaults.standard.set(newValue, forKey: StorageKeys.lastBatteryLevel) }
+    }
+
+    private var lastBatteryTimestamp: Date? {
+        get { UserDefaults.standard.object(forKey: StorageKeys.lastBatteryTimestamp) as? Date }
+        set { UserDefaults.standard.set(newValue, forKey: StorageKeys.lastBatteryTimestamp) }
+    }
+
+    /// Last accurate battery reading (1-99%) with timestamp for UI display
+    /// Returns (level, timestamp) or nil if no valid reading stored
+    var lastAccurateBatteryReading: (level: Int, timestamp: Date)? {
+        guard lastKnownBattery > 0 && lastKnownBattery < 100,
+              let timestamp = lastBatteryTimestamp else {
+            return nil
+        }
+        return (lastKnownBattery, timestamp)
     }
 
     /// Track if we've completed initial bind (determines bind vs connect command)
@@ -826,6 +842,9 @@ final class RingManager {
         isGestureMusicControlSupported = true
         reconnectAttempts = 0
 
+        // Set up passive battery notification callback
+        setupBatteryNotificationCallback()
+
         // Fire off the bind command (don't wait for perfect response)
         BCLRingManager.shared.appEventBindRing(
             date: Date(),
@@ -898,11 +917,15 @@ final class RingManager {
         }
 
         // Handle charging state (battery 101 = charging, 102 = charged)
+        // Note: Battery percentage comes from passive notifications, not bind response
         let rawBattery = Int(response.batteryLevel)
         updateBatteryState(rawBattery: rawBattery)
 
+        // Set up passive battery notification callback
+        setupBatteryNotificationCallback()
+
         let fwDisplay = firmwareVersion ?? "unknown"
-        print("[RingManager] Bind success (FW: \(fwDisplay), battery: \(batteryLevel)%\(isCharging ? " charging" : ""))")
+        print("[RingManager] Bind success (FW: \(fwDisplay)\(isCharging ? ", charging" : ""))")
 
         reconnectAttempts = 0
 
@@ -926,21 +949,48 @@ final class RingManager {
 
     // MARK: - Battery State Handling
 
-    /// Update battery state handling special values:
-    /// - 0-100: Normal battery percentage
+    /// Update charging state only from bind/connect responses
+    /// Battery percentage is updated separately via passive notifications
     /// - 101: Charging in progress
     /// - 102: Charging complete (fully charged)
+    /// - 0-100: Not charging (but don't trust percentage from these responses)
     private func updateBatteryState(rawBattery: Int) {
         switch rawBattery {
         case 101:
             isCharging = true
             chargingState = "Charging"
-            // Keep last known battery or show 0
-            if lastKnownBattery > 0 && lastKnownBattery <= 100 {
-                batteryLevel = lastKnownBattery
-            } else {
-                batteryLevel = 0
+            // Don't update batteryLevel - wait for passive notification
+
+        case 102:
+            isCharging = true
+            chargingState = "Charged"
+            // Fully charged is reliable
+            batteryLevel = 100
+            lastKnownBattery = 100
+
+        case 0...100:
+            isCharging = false
+            chargingState = ""
+            // Don't update batteryLevel from polled responses - wait for passive notification
+            // Exception: if we have no battery reading at all, use this as initial estimate
+            if batteryLevel == 0 && rawBattery > 0 && rawBattery < 100 {
+                batteryLevel = rawBattery
+                lastKnownBattery = rawBattery
             }
+
+        default:
+            break // Unknown value - keep current state
+        }
+    }
+
+    /// Handle passive battery notification from ring
+    /// These are more reliable than polled values
+    /// Filter out 0% and 100% as they can be inaccurate due to battery curve issues
+    private func handlePassiveBatteryNotification(_ rawBattery: Int) {
+        switch rawBattery {
+        case 101:
+            isCharging = true
+            chargingState = "Charging"
 
         case 102:
             isCharging = true
@@ -948,16 +998,42 @@ final class RingManager {
             batteryLevel = 100
             lastKnownBattery = 100
 
-        case 0...100:
+        case 1...99:
+            // Only trust values between 1-99% from passive notifications
             isCharging = false
             chargingState = ""
             batteryLevel = rawBattery
             lastKnownBattery = rawBattery
+            lastBatteryTimestamp = Date()  // Record when we got this accurate reading
+            print("[RingManager] Battery update (passive): \(rawBattery)%")
+
+        case 0:
+            // 0% is often inaccurate - only update charging state
+            isCharging = false
+            chargingState = ""
+            // Don't update batteryLevel - keep last known value
+
+        case 100:
+            // 100% without charging flag may be inaccurate
+            // Only trust it if we're actually charging
+            if isCharging {
+                batteryLevel = 100
+                lastKnownBattery = 100
+            }
 
         default:
-            break // Unknown value - keep current state
+            break
         }
+    }
 
+    /// Subscribe to passive battery notifications from SDK
+    private func setupBatteryNotificationCallback() {
+        BCLRingManager.shared.batteryNotifyBlock = { [weak self] rawBattery in
+            Task { @MainActor in
+                self?.handlePassiveBatteryNotification(rawBattery)
+            }
+        }
+        print("[RingManager] Battery notification callback registered")
     }
 
     // MARK: - HID Mode Configuration

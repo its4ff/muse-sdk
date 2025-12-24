@@ -51,11 +51,28 @@ struct MainTabView: View {
                 }
                 .tag(Tab.map)
         }
-        .tint(.museAccent)
+        .tint(.museText) // Selected tab icon - dark for contrast on light glass
         .toolbarBackground(.visible, for: .tabBar)
         .toolbarBackground(Color.museBackground, for: .tabBar)
         .toolbarColorScheme(.light, for: .tabBar)
         .onAppear {
+            // Configure tab bar appearance for better contrast on iOS 26 Liquid Glass
+            let appearance = UITabBarAppearance()
+            appearance.configureWithOpaqueBackground()
+            appearance.backgroundColor = UIColor(Color.museBackground)
+
+            // Selected state - dark/black for contrast
+            appearance.stackedLayoutAppearance.selected.iconColor = UIColor(Color.museText)
+            appearance.stackedLayoutAppearance.selected.titleTextAttributes = [.foregroundColor: UIColor(Color.museText)]
+
+            // Unselected state - lighter gray
+            appearance.stackedLayoutAppearance.normal.iconColor = UIColor(Color.museTextTertiary)
+            appearance.stackedLayoutAppearance.normal.titleTextAttributes = [.foregroundColor: UIColor(Color.museTextTertiary)]
+
+            UITabBar.appearance().standardAppearance = appearance
+            UITabBar.appearance().scrollEdgeAppearance = appearance
+
+            // Setup services
             setupAppLevelAudioListener()
             setupLocationService()
         }

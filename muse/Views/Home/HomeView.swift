@@ -18,6 +18,7 @@ struct HomeView: View {
     @State private var showOnboarding = false
     @State private var showEditName = false
     @State private var editingName = ""
+    @State private var showHelp = false
 
     // Recording UI state (mirrors RingManager.isRecording)
     @State private var recordingDuration: TimeInterval = 0
@@ -32,6 +33,11 @@ struct HomeView: View {
                 VStack(spacing: Spacing.lg) {
                     // Connection Card
                     connectionCard
+
+                    // First connection hint (shown when no device saved)
+                    if !ringManager.hasSavedDevice && !ringManager.isConnected {
+                        firstConnectionHint
+                    }
 
                     // Battery Card
                     batteryCard
@@ -68,9 +74,22 @@ struct HomeView: View {
                         .font(.museBodyMedium)
                         .foregroundColor(.museText)
                 }
+
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button {
+                        showHelp = true
+                    } label: {
+                        Image(systemName: "questionmark.circle")
+                            .font(.system(size: 14, weight: .light))
+                            .foregroundColor(.museTextSecondary)
+                    }
+                }
             }
             .sheet(isPresented: $showOnboarding) {
                 OnboardingView()
+            }
+            .sheet(isPresented: $showHelp) {
+                HelpSheet()
             }
             .sheet(isPresented: $showEditName) {
                 EditMuseNameSheet(
@@ -229,6 +248,24 @@ struct HomeView: View {
         .museShadowSmall()
     }
 
+    // MARK: - First Connection Hint
+
+    private var firstConnectionHint: some View {
+        HStack(alignment: .top, spacing: Spacing.sm) {
+            Image(systemName: "info.circle")
+                .font(.system(size: 14))
+                .foregroundColor(.museTextTertiary)
+
+            Text("place ring on charging case for first connection. case should show green light + white pulsing on ring. take off case and tap connect above.")
+                .font(.museMicro)
+                .foregroundColor(.museTextTertiary)
+                .fixedSize(horizontal: false, vertical: true)
+        }
+        .padding(Spacing.md)
+        .background(Color.museBackgroundSecondary)
+        .clipShape(RoundedRectangle(cornerRadius: CornerRadius.md))
+    }
+
     // MARK: - Battery Card
 
     private var batteryCard: some View {
@@ -259,25 +296,44 @@ struct HomeView: View {
                     HStack(alignment: .firstTextBaseline, spacing: 2) {
                         if ringManager.isConnected {
                             if ringManager.isCharging && ringManager.chargingState == "Charging" {
-                                // Show charging icon instead of percentage when actively charging
+                                // Show only charging icon when actively charging (no percentage)
                                 Image(systemName: "bolt.fill")
                                     .font(.system(size: 28))
                                     .foregroundColor(.museConnected)
-                            } else {
+                            } else if ringManager.batteryLevel > 0 {
+                                // Only show battery if we have a valid reading from passive notification
                                 Text("\(ringManager.batteryLevel)")
                                     .font(.museDataLarge)
                                     .foregroundColor(batteryColor)
+                                Text("%")
+                                    .font(.museCaption)
+                                    .foregroundColor(.museTextTertiary)
+                            } else if let lastReading = ringManager.lastAccurateBatteryReading {
+                                // Show last accurate reading with age indicator
+                                Text("\(lastReading.level)")
+                                    .font(.museDataLarge)
+                                    .foregroundColor(.museTextMuted)
+                                Text("%")
+                                    .font(.museCaption)
+                                    .foregroundColor(.museTextTertiary)
+                            } else {
+                                // No valid battery reading yet
+                                Text("—")
+                                    .font(.museDataLarge)
+                                    .foregroundColor(.museTextMuted)
                             }
+                        } else if let lastReading = ringManager.lastAccurateBatteryReading {
+                            // Disconnected but have last reading
+                            Text("\(lastReading.level)")
+                                .font(.museDataLarge)
+                                .foregroundColor(.museTextMuted)
+                            Text("%")
+                                .font(.museCaption)
+                                .foregroundColor(.museTextTertiary)
                         } else {
                             Text("—")
                                 .font(.museDataLarge)
                                 .foregroundColor(.museTextMuted)
-                        }
-
-                        if !ringManager.isCharging || ringManager.chargingState != "Charging" {
-                            Text("%")
-                                .font(.museCaption)
-                                .foregroundColor(.museTextTertiary)
                         }
                     }
 
@@ -290,7 +346,7 @@ struct HomeView: View {
 
                 // Battery bar visual
                 BatteryBar(
-                    level: ringManager.batteryLevel,
+                    level: displayBatteryLevel,
                     isConnected: ringManager.isConnected,
                     isCharging: ringManager.isCharging
                 )
@@ -302,12 +358,31 @@ struct HomeView: View {
         .museShadowSmall()
     }
 
+    /// Battery level to display (current or last known)
+    private var displayBatteryLevel: Int {
+        if ringManager.batteryLevel > 0 {
+            return ringManager.batteryLevel
+        }
+        return ringManager.lastAccurateBatteryReading?.level ?? 0
+    }
+
     private var batteryStatusText: String {
         if !ringManager.isConnected {
+            // Show age of last reading when disconnected
+            if let lastReading = ringManager.lastAccurateBatteryReading {
+                return "last seen \(formatTimeAgo(lastReading.timestamp))"
+            }
             return "not connected"
         }
         if ringManager.isCharging {
             return ringManager.chargingState == "Charged" ? "fully charged" : "charging"
+        }
+        if ringManager.batteryLevel == 0 {
+            // Connected but no fresh reading - show age of last reading
+            if let lastReading = ringManager.lastAccurateBatteryReading {
+                return "last updated \(formatTimeAgo(lastReading.timestamp))"
+            }
+            return "waiting for update"
         }
         return "connected"
     }
@@ -489,8 +564,8 @@ struct HomeView: View {
 
             // Mode description
             Text(ringManager.isMusicControlMode
-                 ? "touch gestures control music playback"
-                 : "hold ring to record voice memos")
+                 ? "textured touch area controls music. swipe up = next track, swipe down = previous track"
+                 : "hold textured touch area to record voice memos (green LED glows when recording)")
                 .font(.museMicro)
                 .foregroundColor(.museTextTertiary)
         }
@@ -610,6 +685,24 @@ struct HomeView: View {
         if level >= 60 { return .museText }
         if level >= 30 { return .orange }
         return .red
+    }
+
+    /// Format a timestamp as relative time (e.g., "2h ago", "3d ago")
+    private func formatTimeAgo(_ date: Date) -> String {
+        let interval = Date().timeIntervalSince(date)
+
+        if interval < 60 {
+            return "just now"
+        } else if interval < 3600 {
+            let minutes = Int(interval / 60)
+            return "\(minutes)m ago"
+        } else if interval < 86400 {
+            let hours = Int(interval / 3600)
+            return "\(hours)h ago"
+        } else {
+            let days = Int(interval / 86400)
+            return "\(days)d ago"
+        }
     }
 
     // MARK: - Audio Setup
@@ -759,6 +852,129 @@ struct EditMuseNameSheet: View {
         .background(Color.museBackground)
         .onAppear {
             isFocused = true
+        }
+    }
+}
+
+// MARK: - Help Sheet
+
+struct HelpSheet: View {
+    @Environment(\.dismiss) private var dismiss
+
+    var body: some View {
+        NavigationStack {
+            ScrollView {
+                VStack(alignment: .leading, spacing: Spacing.xl) {
+                    // How It Works
+                    helpSection(title: "how it works") {
+                        helpBullet("tap and hold the frosted area until the green LED lights up")
+                        helpBullet("speak your thought")
+                        helpBullet("release — your muse appears after a few seconds")
+                        helpBullet("if green LED doesn't appear on tap, reconnection is needed")
+                    }
+
+                    // LED Indicators
+                    helpSection(title: "LED indicators") {
+                        helpRow("green (solid)", "recording active")
+                        helpRow("blue (blinking)", "disconnecting and trying to reconnect")
+                        helpRow("blue (solid)", "connected/reconnected")
+                        helpRow("red (blinking or solid)", "battery dead — charge for ~1.5 hours")
+                    }
+
+                    // Charging
+                    helpSection(title: "charging") {
+                        helpBullet("place ring in case with USB-C connected")
+                        helpBullet("case LED may light without USB, but won't actually charge")
+                        helpBullet("battery % can be inaccurate — charge when you see red LED")
+                    }
+
+                    // Connection Tips
+                    helpSection(title: "connection tips") {
+                        helpBullet("keep ring within 5-10 feet of your phone")
+                        helpBullet("if connection drops, ring will flash blue and retry")
+                        helpBullet("use charging case to wake up ring if reconnect fails")
+                        helpBullet("ring may need case wake-up after long disconnect. place ring in case and tap refresh, then take off case and wait a few seconds.")
+                    }
+
+                    // Gesture Modes
+                    helpSection(title: "gesture modes") {
+                        VStack(alignment: .leading, spacing: Spacing.sm) {
+                            Text("voice mode (default)")
+                                .font(.museCaptionMedium)
+                                .foregroundColor(.museText)
+                            helpBullet("tap and hold → speak (green LED is on)→ release to end recording")
+                        }
+                        .padding(.bottom, Spacing.xs)
+
+                        VStack(alignment: .leading, spacing: Spacing.sm) {
+                            Text("music control mode")
+                                .font(.museCaptionMedium)
+                                .foregroundColor(.museText)
+                            helpBullet("swipe up on frosted area → next track")
+                            helpBullet("swipe down on frosted area → previous track")
+                        }
+                    }
+
+                    // Troubleshooting
+                    helpSection(title: "troubleshooting") {
+                        helpBullet("if features aren't working, toggle between music/voice mode")
+                        helpBullet("can't switch modes? put ring on case and reconnect")
+                        helpBullet("transcription works best in quiet environments")
+                    }
+                }
+                .padding(Spacing.lg)
+            }
+            .background(Color.museBackground)
+            .navigationTitle("help")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button {
+                        dismiss()
+                    } label: {
+                        Image(systemName: "xmark.circle.fill")
+                            .font(.system(size: 24))
+                            .foregroundColor(.museTextTertiary)
+                    }
+                }
+            }
+        }
+    }
+
+    private func helpSection(title: String, @ViewBuilder content: () -> some View) -> some View {
+        VStack(alignment: .leading, spacing: Spacing.sm) {
+            Text(title)
+                .font(.museTitle3)
+                .foregroundColor(.museText)
+
+            content()
+        }
+    }
+
+    private func helpBullet(_ text: String) -> some View {
+        HStack(alignment: .top, spacing: Spacing.sm) {
+            Text("•")
+                .font(.museCaption)
+                .foregroundColor(.museTextTertiary)
+
+            Text(text)
+                .font(.museCaption)
+                .foregroundColor(.museTextSecondary)
+                .fixedSize(horizontal: false, vertical: true)
+        }
+    }
+
+    private func helpRow(_ label: String, _ description: String) -> some View {
+        HStack(alignment: .top, spacing: Spacing.sm) {
+            Text(label)
+                .font(.museCaptionMedium)
+                .foregroundColor(.museText)
+                .frame(width: 120, alignment: .leading)
+
+            Text(description)
+                .font(.museCaption)
+                .foregroundColor(.museTextSecondary)
+                .fixedSize(horizontal: false, vertical: true)
         }
     }
 }
