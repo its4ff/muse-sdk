@@ -1,10 +1,9 @@
 # muse v0.5 
 > technically less of an SDK, and more just a pure example app built for muse.
 
-Capture your thoughts with a tap. Share them beautifully.
+Capture your thoughts with a tap. 
 
-muse turns fleeting ideas into shareable moments or memories. Tap, speak, and your words appear — with aesthetic templates to share on X/stories/etc, save to your library, or send to friends & family.
-
+This is an example Muse app, which you can use the existing code of to build nearly any workflow you'd like.
 > **Note:** This version uses our first ring prototype PCB with known BLE disconnect issues. v1.0 is in development with significant PCB improvements and mold design improvements.
 
 ---
@@ -12,11 +11,25 @@ muse turns fleeting ideas into shareable moments or memories. Tap, speak, and yo
 ## How It Works
 
 1. **Tap and hold** the frosted area of ring until the **green LED** lights up
-2. Speak your thought
+2. Speak your muse - it can be anything. a thought, note, idea, to-do, command, quote, yap, memory...
 3. Release — your muse appears in the feed after a few seconds
-4. Long-press any card to **share** as a beautiful image
+4. Long-press any card to **share** as an aesthetic image. View your memories on the muse map.
 
-All transcription happens **on-device** using Whisperkit's small model.
+**The core workflow is as follows:**
+Capacitive touch is pressed on the ring -> Green LED turns on, audio starts recording -> release, audio stops. audio packets are sent to your phone via bluetooth -> audio is saved on your phone + the transcription happens on your phone with whisperkit's smallest model. 
+
+All data + workflows happen on device currently and are saved in Swift Data.
+You can send the audio to the cloud for cleanup, storage on an external database, external workflows on the cloud, etc, etc. 
+
+---
+
+## Current Issues for v0.5
+
+1. **Random disconnections over bluetooth (blue light flashes when disconnects happen. when you press and hold & green indicator doesn't come on, you're disconnected. troubleshooting issues farther below)**
+2. Limited connection range: 5-10 ft from your phone
+3. When washing hands or showering with the ring, it sometimes starts recording audio when water pressure hits the touch area (current version is 5atm waterproof).
+4. Gestures for music aren't super smooth (don't always register, and you have to get used to the pressure and only swiping bottom to top or top to bottom on the textured touch area)
+5. Audio quality (can be easily improved with cloud cleanup on ADPCM audio or wav file. just not implemented here to keep things all on device and simple).
 
 ---
 
@@ -43,7 +56,8 @@ All transcription happens **on-device** using Whisperkit's small model.
 **Connection tips:**
 - Keep ring **within 5-10 feet** of your phone — no offline recordings in this version
 - If connection drops, ring will flash blue several times and keep trying to reconnect
-- Also use the electrical connection in the case for reconnects if you need to
+- Also use the electrical connection in the case for reconnects if you need to. 
+- Worst case you'll need to 'forget the device' in bluetooth settings and then reconnect
 - Often times the ring may not connect, but it's not actually out of battery. It just had it's reconnect cycle timeout most likely, and needs to be sent a wakeup signal (which can be done with the charging case).
 - BLE disconnects are a known issue in this PCB version, and I apologize for how it might affect this initial experience!! 
 
